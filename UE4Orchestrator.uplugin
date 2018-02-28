@@ -1,0 +1,22 @@
+{
+    "FileVersion" : 3,
+    "Version" : 1,
+    "VersionName": "0.0.1",
+    "FriendlyName": "UE4 Orchestrator",
+    "Description": "Embedded HTTP server to do your UE4 bidding.",
+    "Category" : "Research",
+    "CreatedBy": "sabhiram",
+    "CreatedByURL": "https://github.com/recogni/ue4-orchestrator",
+    "DocsURL" : "https://github.com/recogni/ue4-orchestrator",
+    "EnabledByDefault" : true,
+    "CanContainContent": true,
+    "IsBetaVersion" : true,
+    "Installed" : true,
+    "Modules" : [
+        {
+            "Name": "UE4Orchestrator",
+            "Type": "Editor",
+            "LoadingPhase": "Default"
+        },
+    ]
+}
