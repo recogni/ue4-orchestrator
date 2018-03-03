@@ -40,6 +40,7 @@ const mg_str_t STATUS_BAD_ACTION    = mg_mk_str("BAD ACTION\r\n");
 const mg_str_t UE4_PLAY             = mg_mk_str("/ue4/play");
 const mg_str_t UE4_STOP             = mg_mk_str("/ue4/stop");
 const mg_str_t UE4_SHUTDOWN         = mg_mk_str("/ue4/shutdown");
+const mg_str_t UE4_COMMAND          = mg_mk_str("/ue4/command");
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -66,15 +67,10 @@ ev_handler(struct mg_connection* conn, int ev, void *ev_data)
                     return;
                 }
 
-
                 FVector  v;
                 FRotator r;
-                GEditor->RequestPlaySession(
-                    true,
-                    Editor.GetFirstActiveViewport(),
-                    true,
-                    &v,
-                    &r);
+                auto vp = Editor.GetFirstActiveViewport();
+                GEditor->RequestPlaySession(true, vp, true, &v, &r);
 
                 rspMsg = STATUS_OK;
                 rspStatus = 200;
@@ -86,7 +82,6 @@ ev_handler(struct mg_connection* conn, int ev, void *ev_data)
                     UE_LOG(LogUE4Orc, Log, TEXT("ERROR no valid viewport"));
                     return;
                 }
-
                 if (Editor.GetFirstActiveViewport()->HasPlayInEditorViewport())
                 {
                     UE_LOG(LogUE4Orc, Log, TEXT("TODO: Stop play here..."));
@@ -99,6 +94,16 @@ ev_handler(struct mg_connection* conn, int ev, void *ev_data)
             {
                 UE_LOG(LogUE4Orc, Log, TEXT("   SHUTDOWN"));
                 FGenericPlatformMisc::RequestExit(false);
+
+                rspMsg = STATUS_OK;
+                rspStatus = 200;
+            }
+            else if (mg_strcmp(msg->uri, UE4_COMMAND) == 0)
+            {
+                UE_LOG(LogUE4Orc, Log, TEXT("  COMMAND"));
+
+                auto ew = GEditor->GetEditorWorldContext().World();
+                GEditor->Exec(ew, TEXT("py.exec_args import_fbx.py foobar barfoo"), *GLog);
 
                 rspMsg = STATUS_OK;
                 rspStatus = 200;
