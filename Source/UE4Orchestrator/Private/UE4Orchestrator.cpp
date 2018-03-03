@@ -82,8 +82,13 @@ ev_handler(struct mg_connection* conn, int ev, void *ev_data)
                     UE_LOG(LogUE4Orc, Log, TEXT("ERROR no valid viewport"));
                     return;
                 }
+
                 if (Editor.GetFirstActiveViewport()->HasPlayInEditorViewport())
-                    UE_LOG(LogUE4Orc, Log, TEXT("TODO: Stop play here..."));
+                {
+                    FString cmd = "quit";
+                    auto ew = GEditor->GetEditorWorldContext().World();
+                    GEditor->Exec(ew, *cmd, *GLog);
+                }
 
                 rspMsg = STATUS_OK;
                 rspStatus = 200;
