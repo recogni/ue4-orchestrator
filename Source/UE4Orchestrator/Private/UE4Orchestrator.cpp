@@ -83,27 +83,14 @@ ev_handler(struct mg_connection* conn, int ev, void *ev_data)
                     return;
                 }
                 if (Editor.GetFirstActiveViewport()->HasPlayInEditorViewport())
-                {
                     UE_LOG(LogUE4Orc, Log, TEXT("TODO: Stop play here..."));
-                }
 
                 rspMsg = STATUS_OK;
                 rspStatus = 200;
             }
             else if (mg_strcmp(msg->uri, UE4_SHUTDOWN) == 0)
             {
-                UE_LOG(LogUE4Orc, Log, TEXT("   SHUTDOWN"));
                 FGenericPlatformMisc::RequestExit(false);
-
-                rspMsg = STATUS_OK;
-                rspStatus = 200;
-            }
-            else if (mg_strcmp(msg->uri, UE4_COMMAND) == 0)
-            {
-                UE_LOG(LogUE4Orc, Log, TEXT("  COMMAND"));
-
-                auto ew = GEditor->GetEditorWorldContext().World();
-                GEditor->Exec(ew, TEXT("py.exec_args import_fbx.py foobar barfoo"), *GLog);
 
                 rspMsg = STATUS_OK;
                 rspStatus = 200;
@@ -116,8 +103,28 @@ ev_handler(struct mg_connection* conn, int ev, void *ev_data)
         }
         else if (mg_strcmp(msg->method, HTTP_POST) == 0)
         {
-            rspMsg = STATUS_NOT_SUPPORTED;
-            rspStatus = 500;
+            if (mg_strcmp(msg->uri, UE4_COMMAND) == 0)
+            {
+                if (msg->body.len > 0)
+                {
+                    FString cmd = FString::Printf(TEXT("%.*s"), msg->body.len, UTF8_TO_TCHAR(msg->body.p));
+                    auto ew = GEditor->GetEditorWorldContext().World();
+                    GEditor->Exec(ew, *cmd, *GLog);
+
+                    rspMsg = STATUS_OK;
+                    rspStatus = 200;
+                }
+                else
+                {
+                    rspMsg = STATUS_BAD_ACTION;
+                    rspStatus = 500;
+                }
+            }
+            else
+            {
+                rspMsg = STATUS_BAD_ACTION;
+                rspStatus = 500;
+            }
         }
 #else
         rspMsg = STATUS_ERROR;
