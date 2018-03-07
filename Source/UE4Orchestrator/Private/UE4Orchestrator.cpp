@@ -8,6 +8,7 @@
 #include "LevelEditor.h"
 #include "IPlatformFilePak.h"
 #include "FileManagerGeneric.h"
+#include "StreamingNetworkPlatformFile.h"
 
 #if WITH_EDITOR
   #include "Editor.h"
@@ -32,6 +33,8 @@ typedef FModuleManager      FManager;
 static void
 debugFn()
 {
+#define V1 0
+#if V1
     FString pakFilePath("/tmp/foo.pak");
 
     IPlatformFile& PlatformFile = FPlatformFileManager::Get().GetPlatformFile();
@@ -39,23 +42,79 @@ debugFn()
     PakPlatformFile->Initialize(&PlatformFile, TEXT(""));
     FPlatformFileManager::Get().SetPlatformFile(*PakPlatformFile);
 
-    FPakFile PakFile(&PlatformFile, *pakFilePath, false);
+    FString StandardFileName(pakFilePath);
+    FPaths::MakeStandardFilename(StandardFileName);
+    StandardFileName = FPaths::GetPath(StandardFileName);
+
+    if (!PakPlatformFile->Mount(*pakFilePath, 0, *StandardFileName))
+    {
+        UE_LOG(LogUE4Orc, Log, TEXT("Mount Failed!"));
+        return;
+    }
+
+    FPackageName::RegisterMountPoint(TEXT("/DLC/"), StandardFileName);
+
+    struct DebugDirWalker : public IPlatformFile::FDirectoryVisitor
+    {
+        virtual bool
+        Visit(const TCHAR* name, bool isDir)
+        {
+            UE_LOG(LogUE4Orc, Log, TEXT("FILE: %s"), name);
+            return true;
+        }
+    };
+    DebugDirWalker d;
+
+    PakPlatformFile->IterateDirectoryRecursively(*StandardFileName, d);
+#endif // V1
+
+#define OBJECT_LOADER 0
+#if OBJECT_LOADER    
+    IPlatformFile& PlatformFile = FPlatformFileManager::Get().GetPlatformFile();
+    FPakPlatformFile* PakPlatformFile = new FPakPlatformFile();
+    PakPlatformFile->Initialize(&PlatformFile, TEXT(""));
+    FPlatformFileManager::Get().SetPlatformFile(*PakPlatformFile);
+
+    const FString PakFilename("/tmp/foo.pak");
+    FPakFile PakFile(&PlatformFile, *PakFilename, false);
 
     FString MountPoint(FPaths::EngineContentDir());
     PakFile.SetMountPoint(*MountPoint);
 
-    if (PakPlatformFile->Mount(*pakFilePath, 0, *MountPoint))
+    if (PakPlatformFile->Mount(*PakFilename, 0, *MountPoint))
     {
-        UE_LOG(LogUE4Orc, Log, TEXT("Mount success!"));
+        UE_LOG(LogUE4Orc, Log, TEXT("Mount success!"));   
 
-        TSet<FString> FileList;
+        TArray<FString> FileList;
         PakFile.FindFilesAtPath(FileList, *PakFile.GetMountPoint(), true, false, true);
-
-        for (auto f : FileList)
+        for (auto item : FileList)
         {
-            UE_LOG(LogUE4Orc, Log, TEXT("FILE = %s"), *f);
+            FString AssetName = item;
+            FString AssetShortName = FPackageName::GetShortName(AssetName);
+            FString Left, Right;
+            AssetShortName.Split(TEXT("."), &Left, &Right);
+            AssetName = TEXT("/Engine/") + Left + TEXT(".") + Left;
+            FStringAssetReference ref = AssetName;
+
+            FStreamableManager StreamableManager;
+            UObject* lo = StreamableManager.SynchronousLoad(ref);
+            if (lo != nullptr)
+            {
+                UE_LOG(LogUE4Orc, Log, TEXT("%s load success!"), *AssetName);
+            }
+            else
+            {
+                UE_LOG(LogUE4Orc, Log, TEXT("%s load failed!"), *AssetName);   
+            }
         }
     }
+    else 
+    {
+        UE_LOG(LogUE4Orc, Log, TEXT("mount failed!"));
+    }
+#endif // OBJECT_LOADER
+    
+    return;
 }
 
 
