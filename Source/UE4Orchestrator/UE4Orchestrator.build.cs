@@ -12,7 +12,12 @@ public class UE4Orchestrator : ModuleRules
                 "Core",
                 "CoreUObject",
                 "Engine",
+                "Sockets",
+                "StreamingFile",
+                "NetworkFile",
+                "PakFile",
                 "InputCore",
+                "AssetTools",
                 "HTTP",
                 "UnrealEd",
                 // ... add private dependencies that you statically link with here ...
@@ -24,7 +29,12 @@ public class UE4Orchestrator : ModuleRules
                 "Core",
                 "CoreUObject", // @todo Mac: for some reason it's needed to link in debug on Mac
 				"Engine",
+                "PakFile",
+                "Sockets",
+                "StreamingFile",
+                "NetworkFile",
                 "InputCore",
+                "AssetTools",
                 "UnrealEd",
             }
         );
