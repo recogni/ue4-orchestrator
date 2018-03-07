@@ -12,6 +12,8 @@ public class UE4Orchestrator : ModuleRules
                 "Core",
                 "CoreUObject",
                 "Engine",
+                "NetworkFile",
+                "PakFile",
                 "InputCore",
                 "HTTP",
                 "UnrealEd",
@@ -24,6 +26,8 @@ public class UE4Orchestrator : ModuleRules
                 "Core",
                 "CoreUObject", // @todo Mac: for some reason it's needed to link in debug on Mac
 				"Engine",
+                "NetworkFile",
+                "PakFile",
                 "InputCore",
                 "UnrealEd",
             }
