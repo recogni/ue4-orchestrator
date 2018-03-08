@@ -43,12 +43,50 @@ debugFn()
 
 ////////////////////////////////////////////////////////////////////////////////
 
+/*
+ *  mkdir 
+ *  
+ *  Creates a directory and returns true if it was successful (or if it already
+ *  exists).
+ */
+static FORCEINLINE bool
+mkdir(FString path) 
+{
+    IPlatformFile& PlatformFile = FPlatformFileManager::Get().GetPlatformFile();
+    // if (PlatformFile.DirectoryExists(*path))
+    //     return true;
+
+    FPaths::NormalizeDirectoryName(path);
+    path += "/";
+ 
+    FString base;
+    FString head;
+    FString tail;
+ 
+    path.Split(TEXT("/"), &base, &tail);
+    base += "/";
+
+    int32 ct = 0;
+    while(tail != "" && ct++ < 32)
+    {
+        tail.Split(TEXT("/"), &head, &tail);
+        base += head + FString("/");
+
+        if (PlatformFile.DirectoryExists(*base))
+            continue;
+
+        LOG(T("\n\tCREATE DIR: %s"), *base);
+        PlatformFile.CreateDirectory(*base);
+    }
+
+    return PlatformFile.DirectoryExists(*path);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
 static int
 mountPakFile(FString& pakPath, FString& mountPath)
 {
-    LOG(T("Attempting to mount %s -> %s"), *pakPath, *mountPath);
-
-    //  Override
     IPlatformFile& PlatformFile = FPlatformFileManager::Get().GetPlatformFile();
     FPakPlatformFile* PakPlatformFile = new FPakPlatformFile();
     PakPlatformFile->Initialize(&PlatformFile, T(""));
@@ -57,39 +95,54 @@ mountPakFile(FString& pakPath, FString& mountPath)
     const FString PakFilename(pakPath);
     FPakFile PakFile(&PlatformFile, *PakFilename, false);
 
-    // "/Content/Import/02843684/"
-    FString MountPoint = FPaths::GameDir() + mountPath;
+    FString MountPoint = FPaths::ProjectDir() + mountPath;
     FPaths::MakeStandardFilename(MountPoint);
     PakFile.SetMountPoint(*MountPoint);
+
+    if (!mkdir(*MountPoint))
+    {
+        LOG(T("Could not create mount dir %s"), *MountPoint);
+        return -1;
+    }
 
     if (PakPlatformFile->Mount(*PakFilename, 0, *MountPoint))
     {
         LOG(T("Mount %s success"), *MountPoint);
-
+        FStreamableManager StreamableManager;
+    
         TArray<FString> FileList;
         PakFile.FindFilesAtPath(FileList, *PakFile.GetMountPoint(), true, false, true);
-        for (auto item : FileList)
+        for (auto assetPath : FileList)
         {
-            LOG(T("%s"), *item);
+            FString sn, x, noop, subpath, base, ap, bp;
 
-            FString AssetName = item;
-            FString AssetShortName = FPackageName::GetShortName(AssetName);
-            FString Left, Right;
-            AssetShortName.Split(T("."), &Left, &Right);
-            AssetName = T("/Game/Import/02843684/1025dd84537d737febed407fccfaf6d8/") + Left + T(".") + Left;
-            FStringAssetReference ref = AssetName;
+            FPackageName::GetShortName(*assetPath).Split(T("."), &sn, &noop);
+            assetPath.Split(*mountPath, &base, &subpath);
 
-            FStreamableManager StreamableManager;
-            UObject* lo = StreamableManager.SynchronousLoad(ref);
-            if (lo != nullptr)
+            // Calculate the asset game directory.
+            ap = mountPath;
+            ap /= subpath;
+            ap.Split(T("/"), &x, &noop, ESearchCase::CaseSensitive, ESearchDir::FromEnd);
+            ap = x.Replace(UTF8_TO_TCHAR("Content"), UTF8_TO_TCHAR("Game"));
+            ap /= FString::Printf(T("%s.%s"), *sn, *sn);
+
+            // Create the directory before importing the asset.
+            bp = FPaths::ProjectDir() + x;
+            FPaths::MakeStandardFilename(bp);
+            if (!mkdir(*bp))
             {
-                LOG(T(" - %s load success!"), *AssetName);
-            }
-            else
-            {
-                LOG(T(" - %s load failed!"), *AssetName);
+                LOG(T("Could not create dir %s"), *bp);
                 return -1;
             }
+
+            FStringAssetReference ref = ap;
+            UObject* lo = StreamableManager.SynchronousLoad(ref);
+            if (lo == nullptr)
+            {
+                LOG(T("%s load failed!"), *ap);
+                return -1;
+            }
+            LOG(T("%s load success!"), *ap);
         }
     }
     else
@@ -227,7 +280,7 @@ ev_handler(struct mg_connection* conn, int ev, void *ev_data)
                 payload = FString::Printf(T("%.*s"), msg->body.len, UTF8_TO_TCHAR(msg->body.p));
                 payload.TrimEndInline();
                 payload.Split(T(","), &pakPath, &mountPath);
-                
+
                 if (mountPakFile(pakPath, mountPath) < 0)
                     goto ERROR;
                 goto OK;
