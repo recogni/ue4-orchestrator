@@ -9,6 +9,7 @@
 #include "IPlatformFilePak.h"
 #include "FileManagerGeneric.h"
 #include "StreamingNetworkPlatformFile.h"
+#include "Runtime/AssetRegistry/Public/AssetRegistryModule.h"
 
 #if WITH_EDITOR
   #include "Editor.h"
@@ -31,89 +32,66 @@ typedef FModuleManager      FManager;
 ////////////////////////////////////////////////////////////////////////////////
 
 static void
-debugFn()
+debugFn(const char * pakFilePath)
 {
-#define V1 0
-#if V1
-    FString pakFilePath("/tmp/foo.pak");
-
+    //  Override
     IPlatformFile& PlatformFile = FPlatformFileManager::Get().GetPlatformFile();
     FPakPlatformFile* PakPlatformFile = new FPakPlatformFile();
     PakPlatformFile->Initialize(&PlatformFile, TEXT(""));
     FPlatformFileManager::Get().SetPlatformFile(*PakPlatformFile);
 
-    FString StandardFileName(pakFilePath);
-    FPaths::MakeStandardFilename(StandardFileName);
-    StandardFileName = FPaths::GetPath(StandardFileName);
-
-    if (!PakPlatformFile->Mount(*pakFilePath, 0, *StandardFileName))
-    {
-        UE_LOG(LogUE4Orc, Log, TEXT("Mount Failed!"));
-        return;
-    }
-
-    FPackageName::RegisterMountPoint(TEXT("/DLC/"), StandardFileName);
-
-    struct DebugDirWalker : public IPlatformFile::FDirectoryVisitor
-    {
-        virtual bool
-        Visit(const TCHAR* name, bool isDir)
-        {
-            UE_LOG(LogUE4Orc, Log, TEXT("FILE: %s"), name);
-            return true;
-        }
-    };
-    DebugDirWalker d;
-
-    PakPlatformFile->IterateDirectoryRecursively(*StandardFileName, d);
-#endif // V1
-
-#define OBJECT_LOADER 0
-#if OBJECT_LOADER    
-    IPlatformFile& PlatformFile = FPlatformFileManager::Get().GetPlatformFile();
-    FPakPlatformFile* PakPlatformFile = new FPakPlatformFile();
-    PakPlatformFile->Initialize(&PlatformFile, TEXT(""));
-    FPlatformFileManager::Get().SetPlatformFile(*PakPlatformFile);
-
-    const FString PakFilename("/tmp/foo.pak");
+    const FString PakFilename(pakFilePath);
     FPakFile PakFile(&PlatformFile, *PakFilename, false);
 
-    FString MountPoint(FPaths::EngineContentDir());
+    FString MountPoint = FPaths::GameDir() + "/Content/Import/02843684/";
+    FPaths::MakeStandardFilename(MountPoint);
     PakFile.SetMountPoint(*MountPoint);
 
     if (PakPlatformFile->Mount(*PakFilename, 0, *MountPoint))
     {
-        UE_LOG(LogUE4Orc, Log, TEXT("Mount success!"));   
+        UE_LOG(LogUE4Orc, Log, TEXT("Mount success!"));
 
         TArray<FString> FileList;
         PakFile.FindFilesAtPath(FileList, *PakFile.GetMountPoint(), true, false, true);
         for (auto item : FileList)
         {
+            UE_LOG(LogUE4Orc, Log, TEXT("%s"), *item);
+
             FString AssetName = item;
             FString AssetShortName = FPackageName::GetShortName(AssetName);
             FString Left, Right;
             AssetShortName.Split(TEXT("."), &Left, &Right);
-            AssetName = TEXT("/Engine/") + Left + TEXT(".") + Left;
+            AssetName = TEXT("/Game/Import/02843684/1025dd84537d737febed407fccfaf6d8/") + Left + TEXT(".") + Left;
             FStringAssetReference ref = AssetName;
 
             FStreamableManager StreamableManager;
             UObject* lo = StreamableManager.SynchronousLoad(ref);
             if (lo != nullptr)
             {
-                UE_LOG(LogUE4Orc, Log, TEXT("%s load success!"), *AssetName);
+                UE_LOG(LogUE4Orc, Log, TEXT(" - %s load success!"), *AssetName);
             }
             else
             {
-                UE_LOG(LogUE4Orc, Log, TEXT("%s load failed!"), *AssetName);   
+                UE_LOG(LogUE4Orc, Log, TEXT(" - %s load failed!"), *AssetName);
             }
         }
+
+
+        FAssetRegistryModule& AssetRegistry = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
+        TArray<FAssetData> AssetData;
+        AssetRegistry.Get().GetAllAssets(AssetData);
+
+        for (auto data : AssetData)
+        {
+            UE_LOG(LogUE4Orc, Log, TEXT("%s"), *(data.PackageName.ToString()));
+        }
+
     }
-    else 
+    else
     {
         UE_LOG(LogUE4Orc, Log, TEXT("mount failed!"));
     }
-#endif // OBJECT_LOADER
-    
+
     return;
 }
 
@@ -198,7 +176,7 @@ ev_handler(struct mg_connection* conn, int ev, void *ev_data)
             }
             else if (mg_strcmp(msg->uri, UE4_DEBUG) == 0)
             {
-                debugFn();
+                debugFn("/tmp/foo.pak");
 
                 rspMsg = STATUS_OK;
                 rspStatus = 200;

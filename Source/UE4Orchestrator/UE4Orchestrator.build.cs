@@ -17,6 +17,7 @@ public class UE4Orchestrator : ModuleRules
                 "NetworkFile",
                 "PakFile",
                 "InputCore",
+                "AssetTools",
                 "HTTP",
                 "UnrealEd",
                 // ... add private dependencies that you statically link with here ...
@@ -33,6 +34,7 @@ public class UE4Orchestrator : ModuleRules
                 "StreamingFile",
                 "NetworkFile",
                 "InputCore",
+                "AssetTools",
                 "UnrealEd",
             }
         );
