@@ -4,7 +4,7 @@ An unreal engine plugin with an embedded HTTP server to do your bidding.
 
 ## Install
 
-Install this plugin like any other UE4 plugin.  Once this is done, the plugin will host a HTTP server at port `18820`.  
+Install this plugin like any other UE4 plugin.  Once this is done, the plugin will host a HTTP server at port `18820`.
 
 ## HTTP GET Endpoints
 
@@ -55,4 +55,14 @@ Post body is expected to be a comma-separated-`string`.  The first element is th
 Eample: Mount `/tmp/foo.pak` into `/Content/Import/02843684`:
 ```
 echo /tmp/foo.pak,/Content/Import/02843684 | http POST localhost:18820/ue4/loadpak
+```
+
+## Detailed usage example
+
+### Import Shapenet class `00000001` from `/tmp/shapenet/` into `/Game/Import` and generate `/tmp/output.pak`:
+
+```
+echo "py.exec_args import_fbx.py import_shapenet /tmp/shapenet/ 00000001" | http POST localhost:18820/ue4/command
+echo "py.exec_args import_fbx.py make_pak /Game/Import/ /tmp/output.pak" | http POST localhost:18820/ue4/command
+echo "/tmp/output.pak,/Content/Import/02843684" | http POST localhost:18820/ue4/loadpak
 ```

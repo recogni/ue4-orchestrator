@@ -44,25 +44,25 @@ debugFn()
 ////////////////////////////////////////////////////////////////////////////////
 
 /*
- *  mkdir 
- *  
+ *  mkdir
+ *
  *  Creates a directory and returns true if it was successful (or if it already
  *  exists).
  */
 static FORCEINLINE bool
-mkdir(FString path) 
+mkdir(FString path)
 {
     IPlatformFile& PlatformFile = FPlatformFileManager::Get().GetPlatformFile();
-    // if (PlatformFile.DirectoryExists(*path))
-    //     return true;
+    if (PlatformFile.DirectoryExists(*path))
+        return true;
 
     FPaths::NormalizeDirectoryName(path);
     path += "/";
- 
+
     FString base;
     FString head;
     FString tail;
- 
+
     path.Split(TEXT("/"), &base, &tail);
     base += "/";
 
@@ -75,7 +75,6 @@ mkdir(FString path)
         if (PlatformFile.DirectoryExists(*base))
             continue;
 
-        LOG(T("\n\tCREATE DIR: %s"), *base);
         PlatformFile.CreateDirectory(*base);
     }
 
@@ -109,7 +108,7 @@ mountPakFile(FString& pakPath, FString& mountPath)
     {
         LOG(T("Mount %s success"), *MountPoint);
         FStreamableManager StreamableManager;
-    
+
         TArray<FString> FileList;
         PakFile.FindFilesAtPath(FileList, *PakFile.GetMountPoint(), true, false, true);
         for (auto assetPath : FileList)
@@ -183,7 +182,7 @@ const mg_str_t UE4_LOAD_PAKFILE     = mg_mk_str("/ue4/loadpak");
 static void
 ev_handler(struct mg_connection* conn, int ev, void *ev_data)
 {
-    if (ev != MG_EV_HTTP_REQUEST) 
+    if (ev != MG_EV_HTTP_REQUEST)
         return;
 
     http_message_t* msg       = (http_message_t *)ev_data;
@@ -247,9 +246,9 @@ ev_handler(struct mg_connection* conn, int ev, void *ev_data)
             debugFn();
             goto OK;
         }
-        
+
         goto BAD_ACTION;
-        
+
     }
     else if (mg_strcmp(msg->method, HTTP_POST) == 0)
     {
@@ -267,7 +266,7 @@ ev_handler(struct mg_connection* conn, int ev, void *ev_data)
 
         /*
          *  HTTP POST /ue4/loadpak
-         *  
+         *
          *  POST body should contain a comma separated list of the following two arguments:
          *  1. Local .pak file path to mount into the engine.
          *  2. The mount point to load it at.
@@ -287,7 +286,7 @@ ev_handler(struct mg_connection* conn, int ev, void *ev_data)
             }
             else goto BAD_ENTITY;
         }
-    
+
         goto BAD_ACTION;
     }
 #endif // WITH_EDITOR
