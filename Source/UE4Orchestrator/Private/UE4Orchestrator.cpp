@@ -12,9 +12,10 @@
 #include "Runtime/AssetRegistry/Public/AssetRegistryModule.h"
 
 #if WITH_EDITOR
-  #include "Editor.h"
-  #include "Editor/LevelEditor/Public/ILevelViewport.h"
-  #include "Editor/UnrealEd/Public/LevelEditorViewport.h"
+#  include "Editor.h"
+#  include "Editor/LevelEditor/Public/ILevelViewport.h"
+#  include "Editor/LevelEditor/Public/LevelEditorActions.h"
+#  include "Editor/UnrealEd/Public/LevelEditorViewport.h"
 #endif
 
 
@@ -167,15 +168,19 @@ const mg_str_t STATUS_NOT_SUPPORTED = mg_mk_str("NOT SUPPORTED\r\n");
 const mg_str_t STATUS_BAD_ACTION    = mg_mk_str("BAD ACTION\r\n");
 const mg_str_t STATUS_BAD_ENTITY    = mg_mk_str("BAD ENTITY\r\n");
 
-// Action "verbs".
+// GET APIs
 const mg_str_t UE4_PLAY             = mg_mk_str("/ue4/play");
 const mg_str_t UE4_STOP             = mg_mk_str("/ue4/stop");
+const mg_str_t UE4_BUILD            = mg_mk_str("/ue4/build");
 const mg_str_t UE4_SHUTDOWN         = mg_mk_str("/ue4/shutdown");
-const mg_str_t UE4_COMMAND          = mg_mk_str("/ue4/command");
 const mg_str_t UE4_LIST_ASSETS      = mg_mk_str("/ue4/listassets");
-const mg_str_t UE4_DEBUG            = mg_mk_str("/ue4/debug");
+
+// POST APIs
+const mg_str_t UE4_COMMAND          = mg_mk_str("/ue4/command");
 const mg_str_t UE4_LOAD_PAKFILE     = mg_mk_str("/ue4/loadpak");
 
+// DEBUG APIs
+const mg_str_t UE4_DEBUG            = mg_mk_str("/ue4/debug");
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -228,6 +233,11 @@ ev_handler(struct mg_connection* conn, int ev, void *ev_data)
         else if (mg_strcmp(msg->uri, UE4_SHUTDOWN) == 0)
         {
             FGenericPlatformMisc::RequestExit(false);
+            goto OK;
+        }
+        else if (mg_strcmp(msg->uri, UE4_BUILD) == 0)
+        {
+            FLevelEditorActionCallbacks::Build_Execute();
             goto OK;
         }
         else if (mg_strcmp(msg->uri, UE4_LIST_ASSETS) == 0)

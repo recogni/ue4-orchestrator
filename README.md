@@ -66,3 +66,4 @@ echo "py.exec_args import_fbx.py import_shapenet /tmp/shapenet/ 00000001" | http
 echo "py.exec_args import_fbx.py make_pak /Game/Import/ /tmp/output.pak" | http POST localhost:18820/ue4/command
 echo "/tmp/output.pak,/Content/Import/02843684" | http POST localhost:18820/ue4/loadpak
 ```
+
