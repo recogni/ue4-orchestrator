@@ -31,8 +31,8 @@ typedef struct http_message http_message_t;
 typedef FLevelEditorModule  FLvlEditor;
 typedef FModuleManager      FManager;
 
-#define T TEXT
-#define LOG(...) UE_LOG(LogUE4Orc, Log, __VA_ARGS__)
+#define T                   TEXT
+#define LOG(fmt, ...)       UE_LOG(LogUE4Orc, Log, TEXT(fmt), __VA_ARGS__)
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -101,13 +101,13 @@ mountPakFile(FString& pakPath, FString& mountPath)
 
     if (!mkdir(*MountPoint))
     {
-        LOG(T("Could not create mount dir %s"), *MountPoint);
+        LOG("Could not create mount dir %s", *MountPoint);
         return -1;
     }
 
     if (PakPlatformFile->Mount(*PakFilename, 0, *MountPoint))
     {
-        LOG(T("Mount %s success"), *MountPoint);
+        LOG("Mount %s success", *MountPoint);
         FStreamableManager StreamableManager;
 
         TArray<FString> FileList;
@@ -131,7 +131,7 @@ mountPakFile(FString& pakPath, FString& mountPath)
             FPaths::MakeStandardFilename(bp);
             if (!mkdir(*bp))
             {
-                LOG(T("Could not create dir %s"), *bp);
+                LOG("Could not create dir %s", *bp);
                 return -1;
             }
 
@@ -139,15 +139,15 @@ mountPakFile(FString& pakPath, FString& mountPath)
             UObject* lo = StreamableManager.SynchronousLoad(ref);
             if (lo == nullptr)
             {
-                LOG(T("%s load failed!"), *ap);
+                LOG("%s load failed!", *ap);
                 return -1;
             }
-            LOG(T("%s load success!"), *ap);
+            LOG("%s load success!", *ap);
         }
     }
     else
     {
-        LOG(T("mount failed!"));
+        LOG("%s", "mount failed!");
         return -1;
     }
 
@@ -168,10 +168,15 @@ const mg_str_t STATUS_NOT_SUPPORTED = mg_mk_str("NOT SUPPORTED\r\n");
 const mg_str_t STATUS_BAD_ACTION    = mg_mk_str("BAD ACTION\r\n");
 const mg_str_t STATUS_BAD_ENTITY    = mg_mk_str("BAD ENTITY\r\n");
 
+// HTTP query responses.
+const mg_str_t STATUS_TRUE          = mg_mk_str("TRUE\r\n");
+const mg_str_t STATUS_FALSE         = mg_mk_str("FALSE\r\n");
+
 // GET APIs
 const mg_str_t UE4_PLAY             = mg_mk_str("/ue4/play");
 const mg_str_t UE4_STOP             = mg_mk_str("/ue4/stop");
 const mg_str_t UE4_BUILD            = mg_mk_str("/ue4/build");
+const mg_str_t UE4_IS_BUILDING      = mg_mk_str("/ue4/is_building");
 const mg_str_t UE4_SHUTDOWN         = mg_mk_str("/ue4/shutdown");
 const mg_str_t UE4_LIST_ASSETS      = mg_mk_str("/ue4/listassets");
 
@@ -204,7 +209,7 @@ ev_handler(struct mg_connection* conn, int ev, void *ev_data)
         {
             if (!Editor.GetFirstActiveViewport().IsValid())
             {
-                LOG(T("ERROR no valid viewport"));
+                LOG("%s", "ERROR no valid viewport");
                 goto ERROR;
             }
 
@@ -218,7 +223,7 @@ ev_handler(struct mg_connection* conn, int ev, void *ev_data)
         {
             if (!Editor.GetFirstActiveViewport().IsValid())
             {
-                LOG(T("ERROR no valid viewport"));
+                LOG("%s", "ERROR no valid viewport");
                 goto ERROR;
             }
 
@@ -240,6 +245,11 @@ ev_handler(struct mg_connection* conn, int ev, void *ev_data)
             FLevelEditorActionCallbacks::Build_Execute();
             goto OK;
         }
+        else if (mg_strcmp(msg->uri, UE4_IS_BUILDING) == 0)
+        {
+            bool ok = FLevelEditorActionCallbacks::Build_CanExecute();
+            LOG("BUILD CAN EXEC = %d", ok);
+        }
         else if (mg_strcmp(msg->uri, UE4_LIST_ASSETS) == 0)
         {
             FAssetRegistryModule& AssetRegistry = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
@@ -247,7 +257,7 @@ ev_handler(struct mg_connection* conn, int ev, void *ev_data)
             AssetRegistry.Get().GetAllAssets(AssetData);
             for (auto data : AssetData)
             {
-                LOG(T("%s"), *(data.PackageName.ToString()));
+                LOG("%s", *(data.PackageName.ToString()));
             }
             goto OK;
         }
