@@ -207,16 +207,7 @@ ev_handler(struct mg_connection* conn, int ev, void *ev_data)
     {
         if (mg_strcmp(msg->uri, UE4_PLAY) == 0)
         {
-            if (!Editor.GetFirstActiveViewport().IsValid())
-            {
-                LOG("%s", "ERROR no valid viewport");
-                goto ERROR;
-            }
-
-            FVector  v;
-            FRotator r;
-            auto vp = Editor.GetFirstActiveViewport();
-            GEditor->RequestPlaySession(true, vp, true, &v, &r);
+            GEditor->PlayMap(NULL, NULL, -1, -1, false);
             goto OK;
         }
         else if (mg_strcmp(msg->uri, UE4_STOP) == 0)
