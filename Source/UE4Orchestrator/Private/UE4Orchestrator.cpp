@@ -102,6 +102,7 @@ mountPakFile(FString& pakPath, FString& mountPath)
     if (!mkdir(*MountPoint))
     {
         LOG("Could not create mount dir %s", *MountPoint);
+	FPlatformFileManager::Get().SetPlatformFile(PlatformFile);
         return -1;
     }
 
@@ -132,6 +133,7 @@ mountPakFile(FString& pakPath, FString& mountPath)
             if (!mkdir(*bp))
             {
                 LOG("Could not create dir %s", *bp);
+		FPlatformFileManager::Get().SetPlatformFile(PlatformFile);		
                 return -1;
             }
 
@@ -140,6 +142,7 @@ mountPakFile(FString& pakPath, FString& mountPath)
             if (lo == nullptr)
             {
                 LOG("%s load failed!", *ap);
+		FPlatformFileManager::Get().SetPlatformFile(PlatformFile);		
                 return -1;
             }
             LOG("%s load success!", *ap);
@@ -148,9 +151,12 @@ mountPakFile(FString& pakPath, FString& mountPath)
     else
     {
         LOG("%s", "mount failed!");
+	FPlatformFileManager::Get().SetPlatformFile(PlatformFile);	
         return -1;
     }
 
+
+    FPlatformFileManager::Get().SetPlatformFile(PlatformFile);
     return 0;
 }
 
