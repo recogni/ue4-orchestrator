@@ -138,7 +138,7 @@ mountPakFile(FString& pakPath, FString& mountPath)
             }
 
             FStringAssetReference ref = ap;
-            UObject* lo = StreamableManager.SynchronousLoad(ref);
+            UObject* lo = StreamableManager.LoadSynchronous(ref, true);
             if (lo == nullptr)
             {
                 LOG("%s load failed!", *ap);

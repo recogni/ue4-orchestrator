@@ -12,7 +12,7 @@ All these endpoints will trigger the subsequent functionality in the engine.  Th
 
 ### `GET /ue4/play`
 
-Play the current scene in the editor viewport and activate the `server pawn`.
+Play the current scene in the editor viewport and activate the `server pawn`.  Note that this uses `PlayMap` vs `GEditor->RequestPlaySession`.
 
 ### `GET /ue4/stop`
 
