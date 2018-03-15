@@ -87,6 +87,8 @@ mkdir(FString path)
 static int
 mountPakFile(FString& pakPath, FString& mountPath)
 {
+    int ret = 0;
+
     IPlatformFile& PlatformFile = FPlatformFileManager::Get().GetPlatformFile();
     FPakPlatformFile* PakPlatformFile = new FPakPlatformFile();
     PakPlatformFile->Initialize(&PlatformFile, T(""));
@@ -102,8 +104,7 @@ mountPakFile(FString& pakPath, FString& mountPath)
     if (!mkdir(*MountPoint))
     {
         LOG("Could not create mount dir %s", *MountPoint);
-	FPlatformFileManager::Get().SetPlatformFile(PlatformFile);
-        return -1;
+        ret = -1; goto exit;
     }
 
     if (PakPlatformFile->Mount(*PakFilename, 0, *MountPoint))
@@ -133,8 +134,7 @@ mountPakFile(FString& pakPath, FString& mountPath)
             if (!mkdir(*bp))
             {
                 LOG("Could not create dir %s", *bp);
-		FPlatformFileManager::Get().SetPlatformFile(PlatformFile);		
-                return -1;
+                ret = -1; goto exit;
             }
 
             FStringAssetReference ref = ap;
@@ -142,22 +142,21 @@ mountPakFile(FString& pakPath, FString& mountPath)
             if (lo == nullptr)
             {
                 LOG("%s load failed!", *ap);
-		FPlatformFileManager::Get().SetPlatformFile(PlatformFile);		
-                return -1;
+                ret = -1; goto exit;
             }
+
             LOG("%s load success!", *ap);
         }
     }
     else
     {
         LOG("%s", "mount failed!");
-	FPlatformFileManager::Get().SetPlatformFile(PlatformFile);	
-        return -1;
+        ret = -1; goto exit;
     }
 
-
+  exit:
     FPlatformFileManager::Get().SetPlatformFile(PlatformFile);
-    return 0;
+    return ret;
 }
 
 
