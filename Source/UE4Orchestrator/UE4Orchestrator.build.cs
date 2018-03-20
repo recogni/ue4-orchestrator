@@ -4,7 +4,11 @@ using System.Collections.Generic;
 
 public class UE4Orchestrator : ModuleRules
 {
+#if WITH_FORWARDED_MODULE_RULES_CTOR
+    public UE4Orchestrator(ReadOnlyTargetRules Target) : base(Target)
+#else
     public UE4Orchestrator(TargetInfo Target)
+#endif // WITH_FORWARDED_MODULE_RULES_CTOR
     {
         PrivateDependencyModuleNames.AddRange(
             new string[]
