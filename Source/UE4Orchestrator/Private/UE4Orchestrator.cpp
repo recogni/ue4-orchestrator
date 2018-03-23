@@ -113,7 +113,13 @@ mountPakFile(FString& pakPath, FString& mountPath)
         FStreamableManager StreamableManager;
 
         TArray<FString> FileList;
-        PakFile.FindFilesAtPath(FileList, *PakFile.GetMountPoint(), true, false, true);
+        PakFile.FindFilesAtPath(
+            FileList,
+            *PakFile.GetMountPoint(),
+            true,
+            false,
+            true);
+
         for (auto assetPath : FileList)
         {
             FString sn, x, noop, subpath, base, ap, bp;
@@ -124,7 +130,9 @@ mountPakFile(FString& pakPath, FString& mountPath)
             // Calculate the asset game directory.
             ap = mountPath;
             ap /= subpath;
-            ap.Split(T("/"), &x, &noop, ESearchCase::CaseSensitive, ESearchDir::FromEnd);
+            ap.Split(T("/"), &x, &noop,
+                ESearchCase::CaseSensitive,
+                ESearchDir::FromEnd);
             ap = x.Replace(UTF8_TO_TCHAR("Content"), UTF8_TO_TCHAR("Game"));
             ap /= FString::Printf(T("%s.%s"), *sn, *sn);
 
@@ -225,7 +233,7 @@ ev_handler(struct mg_connection* conn, int ev, void *ev_data)
 
             if (Editor.GetFirstActiveViewport()->HasPlayInEditorViewport())
             {
-                FString cmd = "quit";
+                FString cmd = "Exit";
                 auto ew = GEditor->GetEditorWorldContext().World();
                 GEditor->Exec(ew, *cmd, *GLog);
             }
@@ -248,7 +256,10 @@ ev_handler(struct mg_connection* conn, int ev, void *ev_data)
         }
         else if (mg_strcmp(msg->uri, UE4_LIST_ASSETS) == 0)
         {
-            FAssetRegistryModule& AssetRegistry = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
+            auto ar = "AssetRegistry";
+            FAssetRegistryModule& AssetRegistry =
+                FModuleManager::LoadModuleChecked<FAssetRegistryModule>(ar);
+
             TArray<FAssetData> AssetData;
             AssetRegistry.Get().GetAllAssets(AssetData);
             for (auto data : AssetData)
@@ -272,8 +283,9 @@ ev_handler(struct mg_connection* conn, int ev, void *ev_data)
         {
             if (msg->body.len > 0)
             {
-                FString cmd = FString::Printf(T("%.*s"), msg->body.len, UTF8_TO_TCHAR(msg->body.p));
                 auto ew = GEditor->GetEditorWorldContext().World();
+                FString cmd = FString::Printf(T("%.*s"), msg->body.len,
+                                              UTF8_TO_TCHAR(msg->body.p));
                 GEditor->Exec(ew, *cmd, *GLog);
                 goto OK;
             }
@@ -283,7 +295,8 @@ ev_handler(struct mg_connection* conn, int ev, void *ev_data)
         /*
          *  HTTP POST /ue4/loadpak
          *
-         *  POST body should contain a comma separated list of the following two arguments:
+         *  POST body should contain a comma separated list of the following two
+         *  arguments:
          *  1. Local .pak file path to mount into the engine.
          *  2. The mount point to load it at.
          */
@@ -292,7 +305,8 @@ ev_handler(struct mg_connection* conn, int ev, void *ev_data)
             if (msg->body.len > 0)
             {
                 FString payload, pakPath, mountPath;
-                payload = FString::Printf(T("%.*s"), msg->body.len, UTF8_TO_TCHAR(msg->body.p));
+                payload = FString::Printf(T("%.*s"), msg->body.len,
+                                          UTF8_TO_TCHAR(msg->body.p));
                 payload.TrimEndInline();
                 payload.Split(T(","), &pakPath, &mountPath);
 
@@ -378,6 +392,5 @@ URCHTTP::GetStatId() const
 {
     RETURN_QUICK_DECLARE_CYCLE_STAT(URCHTTP, STATGROUP_Tickables);
 }
-
 
 ////////////////////////////////////////////////////////////////////////////////
