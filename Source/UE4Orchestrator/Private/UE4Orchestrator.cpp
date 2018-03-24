@@ -3,6 +3,8 @@
  *  very first file imported.
  */
 #include "UE4Orchestrator.h"
+#include <vector>
+#include <string>
 
 // UE4
 #include "LevelEditor.h"
@@ -170,32 +172,28 @@ mountPakFile(FString& pakPath, FString& mountPath)
 ////////////////////////////////////////////////////////////////////////////////
 
 // HTTP responses.
-const mg_str_t STATUS_OK            = mg_mk_str("OK\r\n");
-const mg_str_t STATUS_ERROR         = mg_mk_str("ERROR\r\n");
-const mg_str_t STATUS_TRY_AGAIN     = mg_mk_str("TRY AGAIN\r\n");
-const mg_str_t STATUS_NOT_SUPPORTED = mg_mk_str("NOT SUPPORTED\r\n");
-const mg_str_t STATUS_BAD_ACTION    = mg_mk_str("BAD ACTION\r\n");
-const mg_str_t STATUS_BAD_ENTITY    = mg_mk_str("BAD ENTITY\r\n");
+const mg_str_t STATUS_OK              = mg_mk_str("OK\r\n");
+const mg_str_t STATUS_ERROR           = mg_mk_str("ERROR\r\n");
+const mg_str_t STATUS_TRY_AGAIN       = mg_mk_str("TRY AGAIN\r\n");
+const mg_str_t STATUS_NOT_SUPPORTED   = mg_mk_str("NOT SUPPORTED\r\n");
+const mg_str_t STATUS_NOT_IMPLEMENTED = mg_mk_str("NOT IMPLEMENTED\r\n");
+const mg_str_t STATUS_BAD_ACTION      = mg_mk_str("BAD ACTION\r\n");
+const mg_str_t STATUS_BAD_ENTITY      = mg_mk_str("BAD ENTITY\r\n");
+const mg_str_t STATUS_TRUE            = mg_mk_str("TRUE\r\n");
+const mg_str_t STATUS_FALSE           = mg_mk_str("FALSE\r\n");
 
-// HTTP query responses.
-const mg_str_t STATUS_TRUE          = mg_mk_str("TRUE\r\n");
-const mg_str_t STATUS_FALSE         = mg_mk_str("FALSE\r\n");
-
-////////////////////////////////////////////////////////////////////////////////
-
-static inline bool
-matches_any(mg_str_t* s, int count, ...)
+// Helper to match a list of URIs.
+template<typename... Strings> bool
+matches_any(mg_str_t* s, Strings... args)
 {
-    va_list va;
-    va_start(va, count);
-    for (int i = 0; i < count; i++)
-        if (mg_vcmp(s, va_arg(va, char*)) == 0)
+    std::vector<std::string> items = {args...};
+    for (int i = 0; i < items.size(); i++)
+        if (mg_vcmp(s, items[i].c_str()) == 0)
             return true;
-
-    va_end(va);
     return false;
 }
 
+////////////////////////////////////////////////////////////////////////////////
 
 static void
 ev_handler(struct mg_connection* conn, int ev, void *ev_data)
@@ -215,14 +213,28 @@ ev_handler(struct mg_connection* conn, int ev, void *ev_data)
     FLvlEditor &Editor =
         FManager::LoadModuleChecked<FLvlEditor>("LevelEditor");
 
+    /*
+     *  HTTP GET commands
+     */
     if (mg_vcmp(&msg->method, "GET") == 0)
     {
-        if (matches_any(&msg->uri, 2, "/play", "/ue4/play"))
+        /*
+         *  HTTP GET /play
+         *
+         *  Trigger a play in the current level.
+         */
+        if (matches_any(&msg->uri, "/play", "/ue4/play"))
         {
             GEditor->PlayMap(NULL, NULL, -1, -1, false);
             goto OK;
         }
-        else if (matches_any(&msg->uri, 2, "/stop", "/ue4/stop"))
+
+        /*
+         *  HTTP GET /play
+         *
+         *  Trigger a play in the current level.
+         */
+        else if (matches_any(&msg->uri, "/stop", "/ue4/stop"))
         {
             if (!Editor.GetFirstActiveViewport().IsValid())
             {
@@ -238,22 +250,46 @@ ev_handler(struct mg_connection* conn, int ev, void *ev_data)
             }
             goto OK;
         }
-        else if (matches_any(&msg->uri, 2, "/shutdown", "/ue4/shutdown"))
+
+        /*
+         *  HTTP GET /shutdown
+         *
+         *  Trigger an editor shutdown.
+         */
+        else if (matches_any(&msg->uri, "/shutdown", "/ue4/shutdown"))
         {
             FGenericPlatformMisc::RequestExit(false);
             goto OK;
         }
-        else if (matches_any(&msg->uri, 2, "/build", "/ue4/build"))
+
+        /*
+         *  HTTP GET /build
+         *
+         *  Trigger a build all for the current level.
+         */
+        else if (matches_any(&msg->uri, "/build", "/ue4/build"))
         {
             FLevelEditorActionCallbacks::Build_Execute();
             goto OK;
         }
-        else if (matches_any(&msg->uri, 2, "/is_building", "/ue4/is_building"))
+
+        /*
+         *  HTTP GET /is_building
+         *
+         *  Returns TRUE if the editor is currently building, FALSE otherwise.
+         */
+        else if (matches_any(&msg->uri, "/is_building", "/ue4/is_building"))
         {
             bool ok = FLevelEditorActionCallbacks::Build_CanExecute();
-            LOG("BUILD CAN EXEC = %d", ok);
+            goto NOT_IMPLEMENTED;
         }
-        else if (matches_any(&msg->uri, 2, "/list_assets", "/ue4/list_assets"))
+
+        /*
+         *  HTTP GET /list_assets
+         *
+         *  Logs all the assets that are registered with the asset manager.
+         */
+        else if (matches_any(&msg->uri, "/list_assets", "/ue4/list_assets"))
         {
             TArray<FAssetData> AssetData;
             AssetRegistry.Get().GetAllAssets(AssetData);
@@ -263,24 +299,46 @@ ev_handler(struct mg_connection* conn, int ev, void *ev_data)
             }
             goto OK;
         }
-        else if (matches_any(&msg->uri, 2, "/assets_idle", "/ue4/assets_idle"))
+
+        /*
+         *  HTTP GET /assets_idle
+         *
+         *  Returns OK if the importer is idle.  Returns a status code to try
+         *  again otherwise.
+         */
+        else if (matches_any(&msg->uri, "/assets_idle", "/ue4/assets_idle"))
         {
             if (AssetRegistry.Get().IsLoadingAssets())
                 goto ONE_MO_TIME;
             goto OK;
         }
-        else if (matches_any(&msg->uri, 2, "/debug", "/ue4/debug"))
+
+        /*
+         *  HTTP GET /debug
+         *
+         *  Catch-all debug endpoint.
+         */
+        else if (matches_any(&msg->uri, "/debug", "/ue4/debug"))
         {
             debugFn();
             goto OK;
         }
 
         goto BAD_ACTION;
-
     }
+
+    /*
+     *  HTTP POST commands
+     */
     else if (mg_vcmp(&msg->method, "POST") == 0)
     {
-        if (matches_any(&msg->uri, 2, "/command", "/ue4/command"))
+        /*
+         *  HTTP POST /command
+         *
+         *  POST body should contain the exact console command that is to be
+         *  run in the UE4 console.
+         */
+        if (matches_any(&msg->uri, "/command", "/ue4/command"))
         {
             if (msg->body.len > 0)
             {
@@ -301,7 +359,7 @@ ev_handler(struct mg_connection* conn, int ev, void *ev_data)
          *  1. Local .pak file path to mount into the engine.
          *  2. The mount point to load it at.
          */
-        else if (matches_any(&msg->uri, 2, "/loadpak", "/ue4/loadpak"))
+        else if (matches_any(&msg->uri, "/loadpak", "/ue4/loadpak"))
         {
             if (msg->body.len > 0)
             {
@@ -340,6 +398,11 @@ ev_handler(struct mg_connection* conn, int ev, void *ev_data)
   ONE_MO_TIME:
     rspMsg    = STATUS_TRY_AGAIN;
     rspStatus = 416;
+    goto done;
+
+  NOT_IMPLEMENTED:
+    rspMsg    = STATUS_NOT_IMPLEMENTED;
+    rspStatus = 500;
     goto done;
 
   OK:
