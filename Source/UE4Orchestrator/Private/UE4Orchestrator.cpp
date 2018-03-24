@@ -230,9 +230,9 @@ ev_handler(struct mg_connection* conn, int ev, void *ev_data)
         }
 
         /*
-         *  HTTP GET /play
+         *  HTTP GET /stop
          *
-         *  Trigger a play in the current level.
+         *  Trigger a stop in the current level.
          */
         else if (matches_any(&msg->uri, "/stop", "/ue4/stop"))
         {
