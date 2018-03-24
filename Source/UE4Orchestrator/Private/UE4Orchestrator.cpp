@@ -18,7 +18,6 @@
 #  include "Editor/UnrealEd/Public/LevelEditorViewport.h"
 #endif
 
-
 // HTTP server
 #include "mongoose.h"
 
@@ -170,13 +169,10 @@ mountPakFile(FString& pakPath, FString& mountPath)
 
 ////////////////////////////////////////////////////////////////////////////////
 
-// HTTP method types.
-const mg_str_t HTTP_GET             = mg_mk_str("GET");
-const mg_str_t HTTP_POST            = mg_mk_str("POST");
-
 // HTTP responses.
 const mg_str_t STATUS_OK            = mg_mk_str("OK\r\n");
 const mg_str_t STATUS_ERROR         = mg_mk_str("ERROR\r\n");
+const mg_str_t STATUS_TRY_AGAIN     = mg_mk_str("TRY AGAIN\r\n");
 const mg_str_t STATUS_NOT_SUPPORTED = mg_mk_str("NOT SUPPORTED\r\n");
 const mg_str_t STATUS_BAD_ACTION    = mg_mk_str("BAD ACTION\r\n");
 const mg_str_t STATUS_BAD_ENTITY    = mg_mk_str("BAD ENTITY\r\n");
@@ -185,22 +181,21 @@ const mg_str_t STATUS_BAD_ENTITY    = mg_mk_str("BAD ENTITY\r\n");
 const mg_str_t STATUS_TRUE          = mg_mk_str("TRUE\r\n");
 const mg_str_t STATUS_FALSE         = mg_mk_str("FALSE\r\n");
 
-// GET APIs
-const mg_str_t UE4_PLAY             = mg_mk_str("/ue4/play");
-const mg_str_t UE4_STOP             = mg_mk_str("/ue4/stop");
-const mg_str_t UE4_BUILD            = mg_mk_str("/ue4/build");
-const mg_str_t UE4_IS_BUILDING      = mg_mk_str("/ue4/is_building");
-const mg_str_t UE4_SHUTDOWN         = mg_mk_str("/ue4/shutdown");
-const mg_str_t UE4_LIST_ASSETS      = mg_mk_str("/ue4/listassets");
-
-// POST APIs
-const mg_str_t UE4_COMMAND          = mg_mk_str("/ue4/command");
-const mg_str_t UE4_LOAD_PAKFILE     = mg_mk_str("/ue4/loadpak");
-
-// DEBUG APIs
-const mg_str_t UE4_DEBUG            = mg_mk_str("/ue4/debug");
-
 ////////////////////////////////////////////////////////////////////////////////
+
+static inline bool
+matches_any(mg_str_t* s, int count, ...)
+{
+    va_list va;
+    va_start(va, count);
+    for (int i = 0; i < count; i++)
+        if (mg_vcmp(s, va_arg(va, char*)) == 0)
+            return true;
+
+    va_end(va);
+    return false;
+}
+
 
 static void
 ev_handler(struct mg_connection* conn, int ev, void *ev_data)
@@ -213,17 +208,21 @@ ev_handler(struct mg_connection* conn, int ev, void *ev_data)
     int             rspStatus = 404;
 
 #if WITH_EDITOR
+    auto ar = "AssetRegistry";
+    FAssetRegistryModule& AssetRegistry =
+        FModuleManager::LoadModuleChecked<FAssetRegistryModule>(ar);
+
     FLvlEditor &Editor =
         FManager::LoadModuleChecked<FLvlEditor>("LevelEditor");
 
-    if (mg_strcmp(msg->method, HTTP_GET) == 0)
+    if (mg_vcmp(&msg->method, "GET") == 0)
     {
-        if (mg_strcmp(msg->uri, UE4_PLAY) == 0)
+        if (matches_any(&msg->uri, 2, "/play", "/ue4/play"))
         {
             GEditor->PlayMap(NULL, NULL, -1, -1, false);
             goto OK;
         }
-        else if (mg_strcmp(msg->uri, UE4_STOP) == 0)
+        else if (matches_any(&msg->uri, 2, "/stop", "/ue4/stop"))
         {
             if (!Editor.GetFirstActiveViewport().IsValid())
             {
@@ -239,27 +238,23 @@ ev_handler(struct mg_connection* conn, int ev, void *ev_data)
             }
             goto OK;
         }
-        else if (mg_strcmp(msg->uri, UE4_SHUTDOWN) == 0)
+        else if (matches_any(&msg->uri, 2, "/shutdown", "/ue4/shutdown"))
         {
             FGenericPlatformMisc::RequestExit(false);
             goto OK;
         }
-        else if (mg_strcmp(msg->uri, UE4_BUILD) == 0)
+        else if (matches_any(&msg->uri, 2, "/build", "/ue4/build"))
         {
             FLevelEditorActionCallbacks::Build_Execute();
             goto OK;
         }
-        else if (mg_strcmp(msg->uri, UE4_IS_BUILDING) == 0)
+        else if (matches_any(&msg->uri, 2, "/is_building", "/ue4/is_building"))
         {
             bool ok = FLevelEditorActionCallbacks::Build_CanExecute();
             LOG("BUILD CAN EXEC = %d", ok);
         }
-        else if (mg_strcmp(msg->uri, UE4_LIST_ASSETS) == 0)
+        else if (matches_any(&msg->uri, 2, "/list_assets", "/ue4/list_assets"))
         {
-            auto ar = "AssetRegistry";
-            FAssetRegistryModule& AssetRegistry =
-                FModuleManager::LoadModuleChecked<FAssetRegistryModule>(ar);
-
             TArray<FAssetData> AssetData;
             AssetRegistry.Get().GetAllAssets(AssetData);
             for (auto data : AssetData)
@@ -268,7 +263,13 @@ ev_handler(struct mg_connection* conn, int ev, void *ev_data)
             }
             goto OK;
         }
-        else if (mg_strcmp(msg->uri, UE4_DEBUG) == 0)
+        else if (matches_any(&msg->uri, 2, "/assets_idle", "/ue4/assets_idle"))
+        {
+            if (AssetRegistry.Get().IsLoadingAssets())
+                goto ONE_MO_TIME;
+            goto OK;
+        }
+        else if (matches_any(&msg->uri, 2, "/debug", "/ue4/debug"))
         {
             debugFn();
             goto OK;
@@ -277,9 +278,9 @@ ev_handler(struct mg_connection* conn, int ev, void *ev_data)
         goto BAD_ACTION;
 
     }
-    else if (mg_strcmp(msg->method, HTTP_POST) == 0)
+    else if (mg_vcmp(&msg->method, "POST") == 0)
     {
-        if (mg_strcmp(msg->uri, UE4_COMMAND) == 0)
+        if (matches_any(&msg->uri, 2, "/command", "/ue4/command"))
         {
             if (msg->body.len > 0)
             {
@@ -300,7 +301,7 @@ ev_handler(struct mg_connection* conn, int ev, void *ev_data)
          *  1. Local .pak file path to mount into the engine.
          *  2. The mount point to load it at.
          */
-        else if (mg_strcmp(msg->uri, UE4_LOAD_PAKFILE) == 0)
+        else if (matches_any(&msg->uri, 2, "/loadpak", "/ue4/loadpak"))
         {
             if (msg->body.len > 0)
             {
@@ -334,6 +335,11 @@ ev_handler(struct mg_connection* conn, int ev, void *ev_data)
   BAD_ENTITY:
     rspMsg    = STATUS_BAD_ENTITY;
     rspStatus = 422;
+    goto done;
+
+  ONE_MO_TIME:
+    rspMsg    = STATUS_TRY_AGAIN;
+    rspStatus = 416;
     goto done;
 
   OK:
