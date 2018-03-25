@@ -25,8 +25,6 @@
 
 ////////////////////////////////////////////////////////////////////////////////
 
-// Random helper defines / misc
-
 typedef struct mg_str       mg_str_t;
 typedef struct http_message http_message_t;
 typedef FLevelEditorModule  FLvlEditor;
@@ -168,7 +166,6 @@ mountPakFile(FString& pakPath, FString& mountPath)
     return ret;
 }
 
-
 ////////////////////////////////////////////////////////////////////////////////
 
 // HTTP responses.
@@ -182,6 +179,7 @@ const mg_str_t STATUS_BAD_ENTITY      = mg_mk_str("BAD ENTITY\r\n");
 const mg_str_t STATUS_TRUE            = mg_mk_str("TRUE\r\n");
 const mg_str_t STATUS_FALSE           = mg_mk_str("FALSE\r\n");
 
+
 // Helper to match a list of URIs.
 template<typename... Strings> bool
 matches_any(mg_str_t* s, Strings... args)
@@ -193,7 +191,6 @@ matches_any(mg_str_t* s, Strings... args)
     return false;
 }
 
-////////////////////////////////////////////////////////////////////////////////
 
 static void
 ev_handler(struct mg_connection* conn, int ev, void *ev_data)
@@ -414,7 +411,6 @@ ev_handler(struct mg_connection* conn, int ev, void *ev_data)
     mg_printf(conn, "%s", rspMsg.p);
 }
 
-
 ////////////////////////////////////////////////////////////////////////////////
 
 URCHTTP&
@@ -423,7 +419,6 @@ URCHTTP::Get()
     static URCHTTP Singleton;
     return Singleton;
 }
-
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -436,7 +431,6 @@ URCHTTP::~URCHTTP()
 {
     mg_mgr_free(&mgr);
 }
-
 
 ////////////////////////////////////////////////////////////////////////////////
 
