@@ -22,6 +22,8 @@ public class UE4Orchestrator : ModuleRules
                 "NetworkFile",
                 "PakFile",
                 "InputCore",
+                "Json",
+                "JsonUtilities",
                 "AssetTools",
                 "HTTP",
                 "UnrealEd",
@@ -40,6 +42,8 @@ public class UE4Orchestrator : ModuleRules
                 "LevelEditor",
                 "NetworkFile",
                 "InputCore",
+                "Json",
+                "JsonUtilities",
                 "AssetTools",
                 "UnrealEd",
             }

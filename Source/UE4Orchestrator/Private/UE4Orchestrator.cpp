@@ -7,6 +7,7 @@
 #include <string>
 
 // UE4
+#include "Json.h"
 #include "LevelEditor.h"
 #include "IPlatformFilePak.h"
 #include "FileManagerGeneric.h"
@@ -23,7 +24,10 @@
 // HTTP server
 #include "mongoose.h"
 
+
 ////////////////////////////////////////////////////////////////////////////////
+
+// Random helper defines / misc
 
 typedef struct mg_str       mg_str_t;
 typedef struct http_message http_message_t;
@@ -36,7 +40,7 @@ typedef FModuleManager      FManager;
 ////////////////////////////////////////////////////////////////////////////////
 
 static void
-debugFn()
+debugFn(FString payload)
 {
     return;
 }
@@ -93,6 +97,13 @@ mountPakFile(FString& pakPath, FString& mountPath)
     PakPlatformFile->Initialize(&PlatformFile, T(""));
     FPlatformFileManager::Get().SetPlatformFile(*PakPlatformFile);
 
+    if (!PlatformFile.FileExists(*pakPath))
+    {
+        LOG("PakFile %s does not exist", *pakPath);
+        FPlatformFileManager::Get().SetPlatformFile(PlatformFile);
+        return -1;
+    }
+
     const FString PakFilename(pakPath);
     FPakFile PakFile(&PlatformFile, *PakFilename, false);
 
@@ -144,6 +155,7 @@ mountPakFile(FString& pakPath, FString& mountPath)
                 ret = -1; goto exit;
             }
 
+            LOG("Created directory: %s", *bp);
             FStringAssetReference ref = ap;
             UObject* lo = StreamableManager.LoadSynchronous(ref, true);
             if (lo == nullptr)
@@ -166,6 +178,7 @@ mountPakFile(FString& pakPath, FString& mountPath)
     return ret;
 }
 
+
 ////////////////////////////////////////////////////////////////////////////////
 
 // HTTP responses.
@@ -176,9 +189,10 @@ const mg_str_t STATUS_NOT_SUPPORTED   = mg_mk_str("NOT SUPPORTED\r\n");
 const mg_str_t STATUS_NOT_IMPLEMENTED = mg_mk_str("NOT IMPLEMENTED\r\n");
 const mg_str_t STATUS_BAD_ACTION      = mg_mk_str("BAD ACTION\r\n");
 const mg_str_t STATUS_BAD_ENTITY      = mg_mk_str("BAD ENTITY\r\n");
+
+// HTTP query responses.
 const mg_str_t STATUS_TRUE            = mg_mk_str("TRUE\r\n");
 const mg_str_t STATUS_FALSE           = mg_mk_str("FALSE\r\n");
-
 
 // Helper to match a list of URIs.
 template<typename... Strings> bool
@@ -191,6 +205,7 @@ matches_any(mg_str_t* s, Strings... args)
     return false;
 }
 
+////////////////////////////////////////////////////////////////////////////////
 
 static void
 ev_handler(struct mg_connection* conn, int ev, void *ev_data)
@@ -227,9 +242,9 @@ ev_handler(struct mg_connection* conn, int ev, void *ev_data)
         }
 
         /*
-         *  HTTP GET /stop
+         *  HTTP GET /play
          *
-         *  Trigger a stop in the current level.
+         *  Trigger a play in the current level.
          */
         else if (matches_any(&msg->uri, "/stop", "/ue4/stop"))
         {
@@ -317,7 +332,7 @@ ev_handler(struct mg_connection* conn, int ev, void *ev_data)
          */
         else if (matches_any(&msg->uri, "/debug", "/ue4/debug"))
         {
-            debugFn();
+            debugFn("");
             goto OK;
         }
 
@@ -329,6 +344,13 @@ ev_handler(struct mg_connection* conn, int ev, void *ev_data)
      */
     else if (mg_vcmp(&msg->method, "POST") == 0)
     {
+        FString body;
+        if (msg->body.len > 0)
+        {
+            body = FString::Printf(T("%.*s"), msg->body.len,
+                                   UTF8_TO_TCHAR(msg->body.p));
+        }
+
         /*
          *  HTTP POST /command
          *
@@ -337,15 +359,13 @@ ev_handler(struct mg_connection* conn, int ev, void *ev_data)
          */
         if (matches_any(&msg->uri, "/command", "/ue4/command"))
         {
-            if (msg->body.len > 0)
+            if (body.Len() > 0)
             {
                 auto ew = GEditor->GetEditorWorldContext().World();
-                FString cmd = FString::Printf(T("%.*s"), msg->body.len,
-                                              UTF8_TO_TCHAR(msg->body.p));
-                GEditor->Exec(ew, *cmd, *GLog);
+                GEditor->Exec(ew, *body, *GLog);
                 goto OK;
             }
-            else goto BAD_ENTITY;
+            goto BAD_ENTITY;
         }
 
         /*
@@ -358,21 +378,49 @@ ev_handler(struct mg_connection* conn, int ev, void *ev_data)
          */
         else if (matches_any(&msg->uri, "/loadpak", "/ue4/loadpak"))
         {
-            if (msg->body.len > 0)
+            if (body.Len() > 0)
             {
-                FString payload, pakPath, mountPath;
-                payload = FString::Printf(T("%.*s"), msg->body.len,
-                                          UTF8_TO_TCHAR(msg->body.p));
-                payload.TrimEndInline();
-                payload.Split(T(","), &pakPath, &mountPath);
+                TSharedPtr<FJsonObject> parsed;
+                auto reader = TJsonReaderFactory<TCHAR>::Create(*body);
 
-                if (mountPakFile(pakPath, mountPath) < 0)
+                FString pakPath, mountPoint;
+                if (FJsonSerializer::Deserialize(reader, parsed))
+                {
+                    if (parsed->HasField("pak_path"))
+                        pakPath = parsed->GetStringField("pak_path");
+                    if (parsed->HasField("mount_point"))
+                        mountPoint = parsed->GetStringField("mount_point");
+                }
+                else
+                {
+                    // JSON did not work, try the old method of using the
+                    // comma separated values.
+                    body.TrimEndInline();
+                    body.Split(T(","), &pakPath, &mountPoint);
+                }
+
+                if (pakPath.Len() == 0 || mountPoint.Len() == 0)
+                    return;
+
+                LOG("Mounting pak file: %s into %s", *pakPath, *mountPoint);
+                if (mountPakFile(pakPath, mountPoint) < 0)
                     goto ERROR;
+
                 goto OK;
             }
-            else goto BAD_ENTITY;
+            goto BAD_ENTITY;
         }
 
+        /*
+         *  HTTP POST /debug
+         *
+         *  Catch-all debug endpoint.
+         */
+        else if (matches_any(&msg->uri, "/debug", "/ue4/debug"))
+        {
+            debugFn(body);
+            goto OK;
+        }
         goto BAD_ACTION;
     }
 #endif // WITH_EDITOR
@@ -411,6 +459,7 @@ ev_handler(struct mg_connection* conn, int ev, void *ev_data)
     mg_printf(conn, "%s", rspMsg.p);
 }
 
+
 ////////////////////////////////////////////////////////////////////////////////
 
 URCHTTP&
@@ -419,6 +468,7 @@ URCHTTP::Get()
     static URCHTTP Singleton;
     return Singleton;
 }
+
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -431,6 +481,7 @@ URCHTTP::~URCHTTP()
 {
     mg_mgr_free(&mgr);
 }
+
 
 ////////////////////////////////////////////////////////////////////////////////
 

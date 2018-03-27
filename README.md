@@ -51,6 +51,16 @@ Eample: Mount `/tmp/foo.pak` into `/Content/Import/02843684`:
 echo /tmp/foo.pak,/Content/Import/02843684 | http POST localhost:18820/loadpak
 ```
 
+The `/loadpak` endpoint will also accept HTTP POST payloads with JSON where the following keys are expected to live:
+```
+{
+    pak_path: <...>,        // Path to pak file in the local system
+    mount_point: <...>,     // Game mount point
+}
+```
+
+The JSON deserializer is attempted first, failing which the payload is checked against the csv scheme.
+
 ## Detailed usage example
 
 ### Import Shapenet class `00000001` from `/tmp/shapenet/` into `/Game/Import` and generate `/tmp/output.pak`:
@@ -60,4 +70,3 @@ echo "py.exec_args import_fbx.py import_shapenet /tmp/shapenet/ 00000001" | http
 echo "py.exec_args import_fbx.py make_pak /Game/Import/ /tmp/output.pak" | http POST localhost:18820/command
 echo "/tmp/output.pak,/Content/Import/02843684" | http POST localhost:18820/loadpak
 ```
-
