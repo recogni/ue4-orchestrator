@@ -5,7 +5,6 @@
 #include "UE4Orchestrator.h"
 #include <vector>
 #include <string>
-
 // UE4
 #include "Json.h"
 #include "LevelEditor.h"
@@ -24,18 +23,7 @@
 // HTTP server
 #include "mongoose.h"
 
-
-////////////////////////////////////////////////////////////////////////////////
-
-// Random helper defines / misc
-
-typedef struct mg_str       mg_str_t;
-typedef struct http_message http_message_t;
-typedef FLevelEditorModule  FLvlEditor;
-typedef FModuleManager      FManager;
-
-#define T                   TEXT
-#define LOG(fmt, ...)       UE_LOG(LogUE4Orc, Log, TEXT(fmt), __VA_ARGS__)
+#include "UCameraRigComponent.h"
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -462,16 +450,6 @@ ev_handler(struct mg_connection* conn, int ev, void *ev_data)
 
 ////////////////////////////////////////////////////////////////////////////////
 
-URCHTTP&
-URCHTTP::Get()
-{
-    static URCHTTP Singleton;
-    return Singleton;
-}
-
-
-////////////////////////////////////////////////////////////////////////////////
-
 URCHTTP::URCHTTP()
 {
 }
@@ -483,22 +461,11 @@ URCHTTP::~URCHTTP()
 }
 
 
-////////////////////////////////////////////////////////////////////////////////
-
-void
-URCHTTP::Init()
+URCHTTP&
+URCHTTP::Get()
 {
-    // Initialize HTTPD server
-    mg_mgr_init(&mgr, NULL);
-    conn = mg_bind(&mgr, "18820", ev_handler);
-    mg_set_protocol_http_websocket(conn);
-
-}
-
-void
-URCHTTP::Tick(float dt)
-{
-    mg_mgr_poll(&mgr, 10);
+    static URCHTTP Singleton;
+    return Singleton;
 }
 
 TStatId
@@ -507,4 +474,80 @@ URCHTTP::GetStatId() const
     RETURN_QUICK_DECLARE_CYCLE_STAT(URCHTTP, STATGROUP_Tickables);
 }
 
+void
+URCHTTP::Init()
+{
+    // Initialize HTTPD server.
+    mg_mgr_init(&mgr, NULL);
+    conn = mg_bind(&mgr, "18820", ev_handler);
+    mg_set_protocol_http_websocket(conn);
+
+    // DEBUG: REMOVEME - this should be configurable.
+    // Setup the camera rig component.
+    TArray<FString> modes;
+    modes.Add("WorldNormal");
+    modes.Add("SceneDepth");
+    modes.Add("PNG");
+    UCameraRigComponent* rig = UCameraRigComponent::Create(GetPawn(), modes);
+}
+
+void
+URCHTTP::Tick(float dt)
+{
+    mg_mgr_poll(&mgr, 10);
+}
+
 ////////////////////////////////////////////////////////////////////////////////
+
+UWorld*
+URCHTTP::GetWorld()
+{
+    UWorld* w = nullptr;
+
+#if WITH_EDITOR
+    UEditorEngine* ee = Cast<UEditorEngine>(GEngine);
+    if (ee != nullptr)
+    {
+        w = ee->PlayWorld;
+        if (w != nullptr && w->IsValidLowLevel() && w->IsGameWorld())
+            return w;
+
+        LOG("%s", "Unable to get PlayWorld from EditorEngine");
+        return nullptr;
+    }
+#endif // WITH_EDITOR
+
+    UGameEngine* ge = Cast<UGameEngine>(GEngine);
+    if (ge != nullptr)
+    {
+        w = ge->GetGameWorld();
+        if (w != nullptr && w->IsValidLowLevel())
+            return w;
+
+        LOG("%s", "Unable to get GameWorld from GameEngine");
+        return nullptr;
+    }
+
+    return nullptr;
+}
+
+APawn*
+URCHTTP::GetPawn()
+{
+    static UWorld* cw = nullptr;
+    UWorld* w = GetWorld();
+
+    if (cw != w)
+    {
+        APlayerController* PlayerController = w->GetFirstPlayerController();
+        check(PlayerController);
+
+        pawn = PlayerController->GetPawn();
+        check(pawn);
+
+        cw = w;
+    }
+
+    return pawn;
+}
+
