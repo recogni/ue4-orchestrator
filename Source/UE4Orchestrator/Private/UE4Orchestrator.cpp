@@ -24,19 +24,6 @@
 // HTTP server
 #include "mongoose.h"
 
-
-////////////////////////////////////////////////////////////////////////////////
-
-// Random helper defines / misc
-
-typedef struct mg_str       mg_str_t;
-typedef struct http_message http_message_t;
-typedef FLevelEditorModule  FLvlEditor;
-typedef FModuleManager      FManager;
-
-#define T                   TEXT
-#define LOG(fmt, ...)       UE_LOG(LogUE4Orc, Log, TEXT(fmt), __VA_ARGS__)
-
 ////////////////////////////////////////////////////////////////////////////////
 
 static void

@@ -8,6 +8,7 @@
 DECLARE_LOG_CATEGORY_EXTERN(LogUE4Orc, Log, All);
 
 #include "mongoose.h"
+#include "types.h"
 
 class UE4ORCHESTRATOR_API URCHTTP : public FTickableGameObject
 {
