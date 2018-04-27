@@ -141,12 +141,12 @@ mountPakFile(FString& pakPath, FString& mountPath)
             bp = FPaths::ProjectDir() + x;
             FPaths::MakeStandardFilename(bp);
             if (!FPlatformFileManager::Get().GetPlatformFile().DirectoryExists(*bp))
-	    {
-	      if(!FPlatformFileManager::Get().GetPlatformFile().CreateDirectoryTree(*bp))
-	      {
-                LOG("Could not create dir %s", *bp);
-                ret = -1; goto exit;
-	      }
+            {
+                if(!FPlatformFileManager::Get().GetPlatformFile().CreateDirectoryTree(*bp))
+                {
+                    LOG("Could not create dir %s", *bp);
+                    ret = -1; goto exit;
+                }
             }
 
             LOG("Created directory: %s", *bp);
@@ -157,12 +157,11 @@ mountPakFile(FString& pakPath, FString& mountPath)
                 LOG("%s load failed!", *ap);
                 ret = -1; goto exit;
             }
-
             LOG("%s load success!", *ap);
 
-	    // Tick the UI
-	    FSlateApplication::Get().PumpMessages();
-	    FSlateApplication::Get().Tick();
+            // Tick the UI.
+            FSlateApplication::Get().PumpMessages();
+            FSlateApplication::Get().Tick();
         }
     }
     else
