@@ -75,7 +75,7 @@ mkdir(FString path)
 ////////////////////////////////////////////////////////////////////////////////
 
 static int
-mountPakFile(FString& pakPath, FString& mountPath)
+mountPakFile(FString& pakPath, FString& mountPath, FWildcardString &pattern)
 {
     int ret = 0;
 
@@ -124,6 +124,11 @@ mountPakFile(FString& pakPath, FString& mountPath)
         for (auto assetPath : FileList)
         {
             FString sn, x, noop, subpath, base, ap, bp;
+
+            // Skip assets that don't fit the pattern
+            if(pattern.IsMatch(assetPath) == false) {
+                continue;
+            }
 
             FPackageName::GetShortName(*assetPath).Split(T("."), &sn, &noop);
             assetPath.Split(*mountPath, &base, &subpath);
@@ -372,6 +377,7 @@ ev_handler(struct mg_connection* conn, int ev, void *ev_data)
          *  arguments:
          *  1. Local .pak file path to mount into the engine.
          *  2. The mount point to load it at.
+         *  3. (optional) wildcard pattern of assets to load (*,? form) 
          */
         else if (matches_any(&msg->uri, "/loadpak", "/ue4/loadpak"))
         {
@@ -380,27 +386,42 @@ ev_handler(struct mg_connection* conn, int ev, void *ev_data)
                 TSharedPtr<FJsonObject> parsed;
                 auto reader = TJsonReaderFactory<TCHAR>::Create(*body);
 
-                FString pakPath, mountPoint;
+                FString pakPath, mountPoint, pattern_string;
+                FWildcardString pattern(T("*")); // Default filter
+
                 if (FJsonSerializer::Deserialize(reader, parsed))
                 {
                     if (parsed->HasField("pak_path"))
                         pakPath = parsed->GetStringField("pak_path");
                     if (parsed->HasField("mount_point"))
                         mountPoint = parsed->GetStringField("mount_point");
+                    if (parsed->HasField("pattern"))
+                        pattern_string = parsed->GetStringField("pattern");
+                        pattern = FWildcardString(pattern_string);
                 }
                 else
                 {
                     // JSON did not work, try the old method of using the
                     // comma separated values.
                     body.TrimEndInline();
-                    body.Split(T(","), &pakPath, &mountPoint);
+
+                    TArray<FString> pak_options;
+                    int32 num_params = body.ParseIntoArray(pak_options, T(","), true);
+                    if(num_params < 2) return;
+                    pakPath = pak_options[0];
+                    mountPoint = pak_options[1];
+                    if(num_params == 2) {
+                        pattern = FWildcardString(T("*"));
+                    } else {
+                        pattern = FWildcardString(pak_options[2]);
+                    }
                 }
 
                 if (pakPath.Len() == 0 || mountPoint.Len() == 0)
                     return;
 
-                LOG("Mounting pak file: %s into %s", *pakPath, *mountPoint);
-                if (mountPakFile(pakPath, mountPoint) < 0)
+                LOG("Mounting pak file: %s into %s wildcard %s", *pakPath, *mountPoint, *pattern);
+                if (mountPakFile(pakPath, mountPoint, pattern) < 0)
                     goto ERROR;
 
                 goto OK;
