@@ -98,10 +98,13 @@ mountPakFile(FString& pakPath, FString& mountPath)
     FPaths::MakeStandardFilename(MountPoint);
     PakFile.SetMountPoint(*MountPoint);
 
-    if (!FPlatformFileManager::Get().GetPlatformFile().CreateDirectory(*MountPoint))
+    if (!FPlatformFileManager::Get().GetPlatformFile().DirectoryExists(*MountPoint))
     {
+      if (!FPlatformFileManager::Get().GetPlatformFile().CreateDirectoryTree(*MountPoint))
+      {
         LOG("Could not create mount dir %s", *MountPoint);
         ret = -1; goto exit;
+      }
     }
 
     if (PakPlatformFile->Mount(*PakFilename, 0, *MountPoint))
@@ -136,10 +139,13 @@ mountPakFile(FString& pakPath, FString& mountPath)
             // Create the directory before importing the asset.
             bp = FPaths::ProjectDir() + x;
             FPaths::MakeStandardFilename(bp);
-            if (FPlatformFileManager::Get().GetPlatformFile().CreateDirectory(*bp))
-            {
+            if (!FPlatformFileManager::Get().GetPlatformFile().DirectoryExists(*bp))
+	    {
+	      if(!FPlatformFileManager::Get().GetPlatformFile().CreateDirectoryTree(*bp))
+	      {
                 LOG("Could not create dir %s", *bp);
                 ret = -1; goto exit;
+	      }
             }
 
             LOG("Created directory: %s", *bp);
