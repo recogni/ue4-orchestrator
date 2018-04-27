@@ -82,6 +82,7 @@ mountPakFile(FString& pakPath, FString& mountPath)
     IPlatformFile& PlatformFile = FPlatformFileManager::Get().GetPlatformFile();
     FPakPlatformFile* PakPlatformFile = new FPakPlatformFile();
     PakPlatformFile->Initialize(&PlatformFile, T(""));
+    PakPlatformFile->InitializeNewAsyncIO();
     FPlatformFileManager::Get().SetPlatformFile(*PakPlatformFile);
 
     if (!PlatformFile.FileExists(*pakPath))
