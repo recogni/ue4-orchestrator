@@ -87,7 +87,7 @@ mountPakFile(FString& pakPath, FString& mountPath, FWildcardString &pattern)
 
     if (!PlatformFile.FileExists(*pakPath))
     {
-	LOG("PakFile %s does not exist", *pakPath);
+        LOG("PakFile %s does not exist", *pakPath);
         FPlatformFileManager::Get().SetPlatformFile(PlatformFile);
         return -1;
     }
@@ -101,11 +101,11 @@ mountPakFile(FString& pakPath, FString& mountPath, FWildcardString &pattern)
 
     if (!FPlatformFileManager::Get().GetPlatformFile().DirectoryExists(*MountPoint))
     {
-	if (!FPlatformFileManager::Get().GetPlatformFile().CreateDirectoryTree(*MountPoint))
-	{
-	    LOG("Could not create mount dir %s", *MountPoint);
-	    ret = -1; goto exit;
-	}
+        if (!FPlatformFileManager::Get().GetPlatformFile().CreateDirectoryTree(*MountPoint))
+        {
+           LOG("Could not create mount dir %s", *MountPoint);
+           ret = -1; goto exit;
+        }
     }
 
     if (PakPlatformFile->Mount(*PakFilename, 0, *MountPoint))
@@ -121,17 +121,16 @@ mountPakFile(FString& pakPath, FString& mountPath, FWildcardString &pattern)
             false,
             true);
 
-	TArray<FSoftObjectPath> AssetsToLoad;
-		
+        TArray<FSoftObjectPath> AssetsToLoad;
+
         for (auto assetPath : FileList)
         {
             FString sn, x, noop, subpath, base, ap, bp;
 
             // Skip assets that don't fit the pattern
-            if(pattern.IsMatch(assetPath) == false) {
-		continue;
-            }
-            
+            if (pattern.IsMatch(assetPath) == false)
+                continue;
+
             FPackageName::GetShortName(*assetPath).Split(T("."), &sn, &noop);
             assetPath.Split(*mountPath, &base, &subpath);
 
@@ -139,8 +138,8 @@ mountPakFile(FString& pakPath, FString& mountPath, FWildcardString &pattern)
             ap = mountPath;
             ap /= subpath;
             ap.Split(T("/"), &x, &noop,
-		     ESearchCase::CaseSensitive,
-		     ESearchDir::FromEnd);
+                ESearchCase::CaseSensitive,
+                ESearchDir::FromEnd);
             ap = x.Replace(UTF8_TO_TCHAR("Content"), UTF8_TO_TCHAR("Game"));
             ap /= FString::Printf(T("%s.%s"), *sn, *sn);
 
@@ -149,34 +148,34 @@ mountPakFile(FString& pakPath, FString& mountPath, FWildcardString &pattern)
             FPaths::MakeStandardFilename(bp);
             if (!FPlatformFileManager::Get().GetPlatformFile().DirectoryExists(*bp))
             {
-		if(!FPlatformFileManager::Get().GetPlatformFile().CreateDirectoryTree(*bp))
+                if (!FPlatformFileManager::Get().GetPlatformFile().CreateDirectoryTree(*bp))
                 {
-		    LOG("Could not create dir %s", *bp);
-		    ret = -1; goto exit;
-		} else
-		{
-		    LOG("Created directory: %s", *bp);
-		}
+                    LOG("Could not create dir %s", *bp);
+                    ret = -1; goto exit;
+                }
+                LOG("Created directory: %s", *bp);
             }
-	    
+
             // Add to the list of assets to load
             AssetsToLoad.Add(ap);
         }
 
-	// Is there anything to loead?
-        if(AssetsToLoad.Num() < 1) {
-	    ret = -1; goto exit;
+        // Is there anything to load?
+        if (AssetsToLoad.Num() < 1)
+        {
+            ret = -1; goto exit;
         }
-	
-	// Dispatch batch load request
-	TSharedPtr<FStreamableHandle> Request = StreamableManager.RequestSyncLoad(AssetsToLoad);
-	
-	LOG("Waiting for pak load request to complete", NULL);
-	EAsyncPackageState::Type Result = Request->WaitUntilComplete();
-	if(Result != EAsyncPackageState::Complete) {
-	    ret = -1; goto exit;
-	}
-	LOG("Requested pak load done", NULL);
+
+        // Dispatch batch load request
+        TSharedPtr<FStreamableHandle> Request = StreamableManager.RequestSyncLoad(AssetsToLoad);
+
+        LOG("Waiting for pak load request to complete", NULL);
+        EAsyncPackageState::Type Result = Request->WaitUntilComplete();
+        if (Result != EAsyncPackageState::Complete)
+        {
+            ret = -1; goto exit;
+        }
+        LOG("Requested pak load done", NULL);
     }
     else
     {
@@ -386,7 +385,7 @@ ev_handler(struct mg_connection* conn, int ev, void *ev_data)
          *  arguments:
          *  1. Local .pak file path to mount into the engine.
          *  2. The mount point to load it at.
-         *  3. (optional) wildcard pattern of assets to load (*,? form) 
+         *  3. (optional) wildcard pattern of assets to load (*,? form)
          */
         else if (matches_any(&msg->uri, "/loadpak", "/ue4/loadpak"))
         {
