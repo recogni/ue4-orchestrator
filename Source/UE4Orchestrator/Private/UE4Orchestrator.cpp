@@ -451,6 +451,8 @@ ev_handler(struct mg_connection* conn, int ev, void *ev_data)
     }
 #endif // WITH_EDITOR
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-label"
   ERROR:
     rspMsg    = STATUS_ERROR;
     rspStatus = 501;
@@ -479,6 +481,7 @@ ev_handler(struct mg_connection* conn, int ev, void *ev_data)
   OK:
     rspMsg    = STATUS_OK;
     rspStatus = 200;
+#pragma GCC diagnostic pop
 
   done:
     mg_send_head(conn, rspStatus, rspMsg.len, "Content-Type: text/plain");
