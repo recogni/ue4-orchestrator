@@ -26,7 +26,6 @@ public class UE4Orchestrator : ModuleRules
                 "JsonUtilities",
                 "AssetTools",
                 "HTTP",
-                "UnrealEd",
                 // ... add private dependencies that you statically link with here ...
             }
         );
@@ -45,8 +44,13 @@ public class UE4Orchestrator : ModuleRules
                 "Json",
                 "JsonUtilities",
                 "AssetTools",
-                "UnrealEd",
             }
         );
+
+        if (Target.bBuildEditor)
+        {
+            PrivateDependencyModuleNames.Add("UnrealEd");
+            PublicDependencyModuleNames.Add("UnrealEd");
+        }
     }
 }

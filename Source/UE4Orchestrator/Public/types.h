@@ -1,18 +1,19 @@
 #pragma once
 
+
 #include "Core.h"
 #include "Engine.h"
 #include "Tickable.h"
 
 // UE4
 #include "Json.h"
-#include "LevelEditor.h"
 #include "IPlatformFilePak.h"
 #include "FileManagerGeneric.h"
 #include "StreamingNetworkPlatformFile.h"
 #include "Runtime/AssetRegistry/Public/AssetRegistryModule.h"
 
 #if WITH_EDITOR
+#  include "LevelEditor.h"
 #  include "Editor.h"
 #  include "Editor/LevelEditor/Public/ILevelViewport.h"
 #  include "Editor/LevelEditor/Public/LevelEditorActions.h"
@@ -23,9 +24,12 @@
 
 typedef struct mg_str               mg_str_t;
 typedef struct http_message         http_message_t;
-typedef FLevelEditorModule          FLvlEditor;
 typedef FModuleManager              FManager;
 typedef FActorComponentTickFunction FTickFn;
+
+#if WITH_EDITOR
+  typedef FLevelEditorModule        FLvlEditor;
+#endif
 
 ////////////////////////////////////////////////////////////////////////////////
 

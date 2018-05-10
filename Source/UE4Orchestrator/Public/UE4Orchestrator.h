@@ -31,4 +31,3 @@ class UE4ORCHESTRATOR_API URCHTTP : public FTickableGameObject
     struct mg_mgr         mgr;
     struct mg_connection* conn;
 };
-

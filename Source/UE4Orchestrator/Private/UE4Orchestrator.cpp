@@ -2,19 +2,22 @@
  *  UE4Orchestrator.h acts as the PCH for this project and must be the
  *  very first file imported.
  */
+
+
 #include "UE4Orchestrator.h"
 #include <vector>
 #include <string>
 
 // UE4
 #include "Json.h"
-#include "LevelEditor.h"
 #include "IPlatformFilePak.h"
 #include "FileManagerGeneric.h"
 #include "StreamingNetworkPlatformFile.h"
 #include "Runtime/AssetRegistry/Public/AssetRegistryModule.h"
 
+
 #if WITH_EDITOR
+#  include "LevelEditor.h"
 #  include "Editor.h"
 #  include "Editor/LevelEditor/Public/ILevelViewport.h"
 #  include "Editor/LevelEditor/Public/LevelEditorActions.h"
@@ -487,7 +490,6 @@ ev_handler(struct mg_connection* conn, int ev, void *ev_data)
     mg_send_head(conn, rspStatus, rspMsg.len, "Content-Type: text/plain");
     mg_printf(conn, "%s", rspMsg.p);
 }
-
 
 ////////////////////////////////////////////////////////////////////////////////
 
