@@ -15,7 +15,7 @@
     "Modules" : [
         {
             "Name": "UE4Orchestrator",
-            "Type": "Editor",
+            "Type": "Runtime",
             "LoadingPhase": "Default"
         },
     ]
