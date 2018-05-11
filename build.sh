@@ -4,4 +4,4 @@ echo "For example in my Linux machine, I use 'export UE4=/home/unreal/UnrealEngi
 
 plugin_file=`pwd`/UE4Orchestrator.uplugin
 package_folder=`pwd`/Plugins/UE4Orchestrator
-"${UE4}"/Engine/Build/BatchFiles/RunUAT.sh BuildPlugin -plugin=${plugin_file} -package=${package_folder} -rocket -targetplatforms=Linux+Mac
+"${UE4}"/Engine/Build/BatchFiles/RunUAT.sh BuildPlugin -plugin=${plugin_file} -package=${package_folder} -rocket -targetplatforms=Mac

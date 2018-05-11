@@ -235,9 +235,6 @@ ev_handler(struct mg_connection* conn, int ev, void *ev_data)
     FAssetRegistryModule& AssetRegistry =
         FModuleManager::LoadModuleChecked<FAssetRegistryModule>(ar);
 
-    FLvlEditor &Editor =
-        FManager::LoadModuleChecked<FLvlEditor>("LevelEditor");
-
     /*
      *  HTTP GET commands
      */
@@ -261,6 +258,9 @@ ev_handler(struct mg_connection* conn, int ev, void *ev_data)
          */
         else if (matches_any(&msg->uri, "/stop", "/ue4/stop"))
         {
+	    FLvlEditor &Editor =
+	        FManager::LoadModuleChecked<FLvlEditor>("LevelEditor");
+
             if (!Editor.GetFirstActiveViewport().IsValid())
             {
                 LOG("%s", "ERROR no valid viewport");
