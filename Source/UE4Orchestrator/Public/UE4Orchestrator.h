@@ -1,9 +1,5 @@
 #pragma once
 
-#include "Core.h"
-#include "Engine.h"
-#include "Tickable.h"
-
 // Logging stuff ...
 DECLARE_LOG_CATEGORY_EXTERN(LogUE4Orc, Log, All);
 

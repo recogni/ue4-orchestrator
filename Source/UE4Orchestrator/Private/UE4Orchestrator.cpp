@@ -9,12 +9,14 @@
 #include <string>
 
 // UE4
-#include "Json.h"
+#include "CoreMinimal.h"
 #include "IPlatformFilePak.h"
 #include "FileManagerGeneric.h"
 #include "StreamingNetworkPlatformFile.h"
 #include "Runtime/AssetRegistry/Public/AssetRegistryModule.h"
-
+#include "Runtime/Json/Public/Dom/JsonObject.h"
+#include "Runtime/Core/Public/Misc/WildcardString.h"
+#include "Runtime/Engine/Classes/Engine/StreamableManager.h"
 
 #if WITH_EDITOR
 #  include "LevelEditor.h"

@@ -1,7 +1,6 @@
 #include "UE4Orchestrator.h"
 
-#include "Core.h"
-#include "Engine.h"
+#include "CoreMinimal.h"
 #include "ModuleManager.h"
 #include "ModuleInterface.h"
 
