@@ -531,7 +531,7 @@ URCHTTP::Init()
 void
 URCHTTP::Tick(float dt)
 {
-    mg_mgr_poll(&mgr, 10);
+    mg_mgr_poll(&mgr, 0);
 }
 
 TStatId
