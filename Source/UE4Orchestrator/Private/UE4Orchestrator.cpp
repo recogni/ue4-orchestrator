@@ -231,6 +231,7 @@ ev_handler(struct mg_connection* conn, int ev, void *ev_data)
     http_message_t* msg       = (http_message_t *)ev_data;
     mg_str_t        rspMsg    = STATUS_ERROR;
     int             rspStatus = 404;
+    URCHTTP&        server    = URCHTTP::Get();
 
 #if WITH_EDITOR
     auto ar = "AssetRegistry";
@@ -243,11 +244,21 @@ ev_handler(struct mg_connection* conn, int ev, void *ev_data)
     if (mg_vcmp(&msg->method, "GET") == 0)
     {
         /*
+         *  HTTP GET /
+         *
+         *  Return "OK"
+         */
+        if (matches_any(&msg->uri, "/"))
+        {
+            goto OK;
+        }
+
+        /*
          *  HTTP GET /play
          *
          *  Trigger a play in the current level.
          */
-        if (matches_any(&msg->uri, "/play", "/ue4/play"))
+        else if (matches_any(&msg->uri, "/play", "/ue4/play"))
         {
             GEditor->PlayMap(NULL, NULL, -1, -1, false);
             goto OK;
@@ -260,8 +271,8 @@ ev_handler(struct mg_connection* conn, int ev, void *ev_data)
          */
         else if (matches_any(&msg->uri, "/stop", "/ue4/stop"))
         {
-	    FLvlEditor &Editor =
-	        FManager::LoadModuleChecked<FLvlEditor>("LevelEditor");
+            FLvlEditor &Editor =
+                FManager::LoadModuleChecked<FLvlEditor>("LevelEditor");
 
             if (!Editor.GetFirstActiveViewport().IsValid())
             {
@@ -367,12 +378,29 @@ ev_handler(struct mg_connection* conn, int ev, void *ev_data)
         }
 
         /*
+         *  HTTP POST /poll_interval
+         *
+         *  POST body should contain an int which specifies the polling
+         *  interval.  This value should be positive to delay the polling,
+         *  and can be set to 0 (or negative) to assume default behavior of
+         *  one poll() per tick().
+         */
+        if (matches_any(&msg->uri, "/poll_interval"))
+        {
+            int x = FCString::Atoi(*body);
+            if (x < 0)
+                x = 0;
+            server.SetPollInterval(x);
+            goto OK;
+        }
+
+        /*
          *  HTTP POST /command
          *
          *  POST body should contain the exact console command that is to be
          *  run in the UE4 console.
          */
-        if (matches_any(&msg->uri, "/command", "/ue4/command"))
+        else if (matches_any(&msg->uri, "/command", "/ue4/command"))
         {
             if (body.Len() > 0)
             {
@@ -506,6 +534,7 @@ URCHTTP::Get()
 ////////////////////////////////////////////////////////////////////////////////
 
 URCHTTP::URCHTTP()
+    : poll_interval(0), poll_ms(1)
 {
 }
 
@@ -525,13 +554,21 @@ URCHTTP::Init()
     mg_mgr_init(&mgr, NULL);
     conn = mg_bind(&mgr, "18820", ev_handler);
     mg_set_protocol_http_websocket(conn);
+}
 
+void
+URCHTTP::SetPollInterval(int v)
+{
+    poll_interval = v;
 }
 
 void
 URCHTTP::Tick(float dt)
 {
-    mg_mgr_poll(&mgr, 1);
+    static int tick_counter = 0;
+
+    if (poll_interval == 0 || (tick_counter++ % poll_interval) == 0)
+        mg_mgr_poll(&mgr, poll_ms);
 }
 
 TStatId
