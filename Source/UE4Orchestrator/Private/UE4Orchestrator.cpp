@@ -364,18 +364,11 @@ ev_handler(struct mg_connection* conn, int ev, void *ev_data)
                 TSharedPtr<FJsonObject> parsed;
                 auto reader = TJsonReaderFactory<TCHAR>::Create(*body);
 
-                FString pakPath, mountPoint, pattern_string;
-                FWildcardString pattern(T("*")); // Default filter
-
+                FString pakPath;
                 if (FJsonSerializer::Deserialize(reader, parsed))
                 {
                     if (parsed->HasField("pak_path"))
                         pakPath = parsed->GetStringField("pak_path");
-                    if (parsed->HasField("mount_point"))
-                        mountPoint = parsed->GetStringField("mount_point");
-                    if (parsed->HasField("pattern"))
-                        pattern_string = parsed->GetStringField("pattern");
-                        pattern = FWildcardString(pattern_string);
                 }
                 else
                 {
@@ -385,20 +378,13 @@ ev_handler(struct mg_connection* conn, int ev, void *ev_data)
 
                     TArray<FString> pak_options;
                     int32 num_params = body.ParseIntoArray(pak_options, T(","), true);
-                    if(num_params < 2) return;
                     pakPath = pak_options[0];
-                    mountPoint = pak_options[1];
-                    if(num_params == 2) {
-                        pattern = FWildcardString(T("*"));
-                    } else {
-                        pattern = FWildcardString(pak_options[2]);
-                    }
                 }
 
-                if (pakPath.Len() == 0 || mountPoint.Len() == 0)
+                if (pakPath.Len() == 0)
                     return;
 
-                LOG("Mounting pak file: %s into %s wildcard %s", *pakPath, *mountPoint, *pattern);
+                LOG("Mounting pak file: %s", *pakPath);
                 if (URCHTTP::mountPakFile(pakPath) < 0)
                     goto ERROR;
 
