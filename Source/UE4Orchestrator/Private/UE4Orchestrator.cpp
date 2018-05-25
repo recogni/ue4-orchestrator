@@ -1,3 +1,5 @@
+/* -*- mode: c; tab-width: 4; indent-tabs-mode: nil; -*- */
+
 /*
  *  UE4Orchestrator.h acts as the PCH for this project and must be the
  *  very first file imported.
@@ -40,34 +42,33 @@ debugFn(FString payload)
 
 ////////////////////////////////////////////////////////////////////////////////
 
-int URCHTTP::mountPakFile(const FString& pakPath) 
+int URCHTTP::mountPakFile(const FString& pakPath)
 {
     int ret = 0;
-
-    IPlatformFile *originalPlatform = &FPlatformFileManager::Get().GetPlatformFile();	    
+    IPlatformFile *originalPlatform = &FPlatformFileManager::Get().GetPlatformFile();
 
     // Check to see if the file exists first
-    if(!originalPlatform->FileExists(*pakPath))
+    if (!originalPlatform->FileExists(*pakPath))
     {
-	LOG("PakFile %s does not exist", *pakPath);
-	return -1;
+        LOG("PakFile %s does not exist", *pakPath);
+        return -1;
     }
-    
+
     // Allocate a new platform PAK object
     // FIXME - this leaks but it may not matter
     FPakPlatformFile *PakFileMgr = new FPakPlatformFile();
-    if(PakFileMgr == nullptr)
+    if (PakFileMgr == nullptr)
     {
-	LOG("Failed to create platform file %s", T("PakFile"));	    
-	return -1;
+        LOG("Failed to create platform file %s", T("PakFile"));
+        return -1;
     }
 
     // Initialize the lower level file from the previous top layer
     PakFileMgr->Initialize(&FPlatformFileManager::Get().GetPlatformFile(),T(""));
     PakFileMgr->InitializeNewAsyncIO();
-    
+
     // The pak reader is now the current platform file
-    FPlatformFileManager::Get().SetPlatformFile(*PakFileMgr);	
+    FPlatformFileManager::Get().SetPlatformFile(*PakFileMgr);
 
     // Get the mount point from the Pak meta-data
     static FPakFile PakFile(PakFileMgr, *pakPath, false);
@@ -84,43 +85,45 @@ int URCHTTP::mountPakFile(const FString& pakPath)
 
     if(PakFileMgr->Mount(*pakPath, 0, *MountPointFull))
     {
-	LOG("Mount %s success", *MountPoint);	
+        LOG("Mount %s success", *MountPoint);
+        if (UAssetManager* Manager = UAssetManager::GetIfValid())
+        {
+            Manager->GetAssetRegistry().SearchAllAssets(true);
 
-	UAssetManager *Manager;
-	
-	// Add to the list of assets to load
-	if ((Manager = UAssetManager::GetIfValid()) != nullptr)
-	{
-	    Manager->GetAssetRegistry().SearchAllAssets(true);
+            TArray<FString> FileList;
+            PakFile.FindFilesAtPath(FileList, *PakFile.GetMountPoint(),
+                        true, false, true);
 
-	    TArray<FString> FileList;
-	    PakFile.FindFilesAtPath(FileList, *PakFile.GetMountPoint(),
-				    true, false, true);
-	    
-	    // Iterate over the collected files from the pak
-	    for(auto asset : FileList)
-	    {
-		FString Package, BaseName, Extension;
-		FPaths::Split(asset, Package, BaseName, Extension);
-		FString ModifiedAssetName = Package / BaseName + "." + BaseName;
-		// FIXME - this should test for the type rather than the name
-		if( (BaseName.Find(T("material"))) ||
-		    (BaseName.Find(T("model"))) )
-		{
-		    LOG("Trying to load %s as %s ", *asset, *ModifiedAssetName);
-		    Manager->GetStreamableManager().LoadSynchronous(ModifiedAssetName, true, nullptr);
-		}
-	    }
-	}
+            // Iterate over the collected files from the pak
+            for (auto asset : FileList)
+            {
+                FString Package, BaseName, Extension;
+                FPaths::Split(asset, Package, BaseName, Extension);
+                FString ModifiedAssetName = Package / BaseName + "." + BaseName;
 
-	// Restore the platform file
-	FPlatformFileManager::Get().SetPlatformFile(*originalPlatform);
+                // FIXME - this should test for the type rather than the name
+                if (BaseName.Find(T("material")) || BaseName.Find(T("model")))
+                {
+                    LOG("Trying to load %s as %s ", *asset, *ModifiedAssetName);
+                    Manager->GetStreamableManager().LoadSynchronous(ModifiedAssetName, true, nullptr);
+                }
+            }
+        }
+        else
+        {
+            LOG("Asset manager not valid!", NULL);
+            ret = -1; goto exit;
+        }
     }
     else
     {
-	LOG("%s", "mount failed!");
-	ret = -1; return -1;
+        LOG("mount failed!", NULL);
+        ret = -1; goto exit;
     }
+
+  exit:
+    // Restore the platform file
+    FPlatformFileManager::Get().SetPlatformFile(*originalPlatform);
 
     return ret;
 }
@@ -265,8 +268,8 @@ ev_handler(struct mg_connection* conn, int ev, void *ev_data)
             AssetRegistry.Get().GetAllAssets(AssetData);
             for (auto data : AssetData)
             {
-		FString path = *(data.PackageName.ToString());
-		FPaths::MakePlatformFilename(path);
+        FString path = *(data.PackageName.ToString());
+        FPaths::MakePlatformFilename(path);
                 LOG("%s %s", *(data.PackageName.ToString()), *path);
             }
             goto OK;

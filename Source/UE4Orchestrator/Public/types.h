@@ -1,3 +1,5 @@
+/* -*- mode: c; tab-width: 4; indent-tabs-mode: nil; -*- */
+
 #pragma once
 
 // UE4
