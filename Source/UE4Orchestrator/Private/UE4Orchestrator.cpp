@@ -85,32 +85,31 @@ int URCHTTP::mountPakFile(const FString& pakPath)
     if(PakFileMgr->Mount(*pakPath, 0, *MountPointFull))
     {
 	LOG("Mount %s success", *MountPoint);	
+
+	UAssetManager *Manager;
 	
 	// Add to the list of assets to load
-	if (UAssetManager* Manager = UAssetManager::GetIfValid())
+	if ((Manager = UAssetManager::GetIfValid()) != nullptr)
 	{
 	    Manager->GetAssetRegistry().SearchAllAssets(true);
-	}
 
-	// Load all of the assets
-	FStreamableManager StreamableManager;
-
-        TArray<FString> FileList;
-        PakFile.FindFilesAtPath(FileList, *PakFile.GetMountPoint(),
-				true, false, true);
-
-	// Iterate over the collected files from the pak
-	for(auto asset : FileList)
-	{
-	    FString Package, BaseName, Extension;
-	    FPaths::Split(asset, Package, BaseName, Extension);
-	    FString ModifiedAssetName = Package / BaseName + "." + BaseName;
-	    // FIXME - this should test for the type rather than the name
-	    if( (BaseName.Find(T("material"))) ||
-		(BaseName.Find(T("model"))) )
+	    TArray<FString> FileList;
+	    PakFile.FindFilesAtPath(FileList, *PakFile.GetMountPoint(),
+				    true, false, true);
+	    
+	    // Iterate over the collected files from the pak
+	    for(auto asset : FileList)
 	    {
-		LOG("Trying to load %s as %s ", *asset, *ModifiedAssetName);
-		StreamableManager.LoadSynchronous(ModifiedAssetName, true, nullptr);
+		FString Package, BaseName, Extension;
+		FPaths::Split(asset, Package, BaseName, Extension);
+		FString ModifiedAssetName = Package / BaseName + "." + BaseName;
+		// FIXME - this should test for the type rather than the name
+		if( (BaseName.Find(T("material"))) ||
+		    (BaseName.Find(T("model"))) )
+		{
+		    LOG("Trying to load %s as %s ", *asset, *ModifiedAssetName);
+		    Manager->GetStreamableManager().LoadSynchronous(ModifiedAssetName, true, nullptr);
+		}
 	    }
 	}
 
