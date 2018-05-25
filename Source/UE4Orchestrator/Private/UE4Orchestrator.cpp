@@ -17,6 +17,7 @@
 #include "Runtime/Json/Public/Dom/JsonObject.h"
 #include "Runtime/Core/Public/Misc/WildcardString.h"
 #include "Runtime/Engine/Classes/Engine/StreamableManager.h"
+#include "Runtime/Engine/Classes/Engine/AssetManager.h"
 
 #if WITH_EDITOR
 #  include "LevelEditor.h"
@@ -39,157 +40,89 @@ debugFn(FString payload)
 
 ////////////////////////////////////////////////////////////////////////////////
 
-/*
- *  mkdir
- *
- *  Creates a directory and returns true if it was successful (or if it already
- *  exists).
- */
-static FORCEINLINE bool
-mkdir(FString path)
-{
-    IPlatformFile& PlatformFile = FPlatformFileManager::Get().GetPlatformFile();
-    if (PlatformFile.DirectoryExists(*path))
-        return true;
-
-    FPaths::NormalizeDirectoryName(path);
-    path += "/";
-
-    FString base;
-    FString head;
-    FString tail;
-
-    path.Split(TEXT("/"), &base, &tail);
-    base += "/";
-
-    int32 ct = 0;
-    while(tail != "" && ct++ < 32)
-    {
-        tail.Split(TEXT("/"), &head, &tail);
-        base += head + FString("/");
-
-        if (PlatformFile.DirectoryExists(*base))
-            continue;
-
-        PlatformFile.CreateDirectory(*base);
-    }
-
-    return PlatformFile.DirectoryExists(*path);
-}
-
-////////////////////////////////////////////////////////////////////////////////
-
-static int
-mountPakFile(FString& pakPath, FString& mountPath, FWildcardString &pattern)
+int URCHTTP::mountPakFile(const FString& pakPath) 
 {
     int ret = 0;
 
-    IPlatformFile& PlatformFile = FPlatformFileManager::Get().GetPlatformFile();
-    FPakPlatformFile* PakPlatformFile = new FPakPlatformFile();
-    PakPlatformFile->Initialize(&PlatformFile, T(""));
-    PakPlatformFile->InitializeNewAsyncIO();
-    FPlatformFileManager::Get().SetPlatformFile(*PakPlatformFile);
+    IPlatformFile *originalPlatform = &FPlatformFileManager::Get().GetPlatformFile();	    
 
-    if (!PlatformFile.FileExists(*pakPath))
+    // Check to see if the file exists first
+    if(!originalPlatform->FileExists(*pakPath))
     {
-        LOG("PakFile %s does not exist", *pakPath);
-        FPlatformFileManager::Get().SetPlatformFile(PlatformFile);
-        return -1;
+	LOG("PakFile %s does not exist", *pakPath);
+	return -1;
+    }
+    
+    // Allocate a new platform PAK object
+    // FIXME - this leaks but it may not matter
+    FPakPlatformFile *PakFileMgr = new FPakPlatformFile();
+    if(PakFileMgr == nullptr)
+    {
+	LOG("Failed to create platform file %s", T("PakFile"));	    
+	return -1;
     }
 
-    const FString PakFilename(pakPath);
-    FPakFile PakFile(&PlatformFile, *PakFilename, false);
+    // Initialize the lower level file from the previous top layer
+    PakFileMgr->Initialize(&FPlatformFileManager::Get().GetPlatformFile(),T(""));
+    PakFileMgr->InitializeNewAsyncIO();
+    
+    // The pak reader is now the current platform file
+    FPlatformFileManager::Get().SetPlatformFile(*PakFileMgr);	
 
-    FString MountPoint = FPaths::ProjectDir() + mountPath;
-    FPaths::MakeStandardFilename(MountPoint);
-    PakFile.SetMountPoint(*MountPoint);
+    // Get the mount point from the Pak meta-data
+    static FPakFile PakFile(PakFileMgr, *pakPath, false);
+    FString MountPoint = PakFile.GetMountPoint();
 
-    if (!FPlatformFileManager::Get().GetPlatformFile().DirectoryExists(*MountPoint))
+    // Determine where the on-disk path is for the mountpoint and register it
+    FString PathOnDisk = FPaths::ProjectDir() / MountPoint;
+    FPackageName::RegisterMountPoint(MountPoint, PathOnDisk);
+
+    FString MountPointFull = PathOnDisk;
+    FPaths::MakeStandardFilename(MountPointFull);
+
+    LOG("Mounting at %s and registering mount point %s at %s", *MountPointFull, *MountPoint, *PathOnDisk);
+
+    if(PakFileMgr->Mount(*pakPath, 0, *MountPointFull))
     {
-        if (!FPlatformFileManager::Get().GetPlatformFile().CreateDirectoryTree(*MountPoint))
-        {
-           LOG("Could not create mount dir %s", *MountPoint);
-           ret = -1; goto exit;
-        }
-    }
+	LOG("Mount %s success", *MountPoint);	
+	
+	// Add to the list of assets to load
+	if (UAssetManager* Manager = UAssetManager::GetIfValid())
+	{
+	    Manager->GetAssetRegistry().SearchAllAssets(true);
+	}
 
-    if (PakPlatformFile->Mount(*PakFilename, 0, *MountPoint))
-    {
-        LOG("Mount %s success", *MountPoint);
-        FStreamableManager StreamableManager;
+	// Load all of the assets
+	FStreamableManager StreamableManager;
 
         TArray<FString> FileList;
-        PakFile.FindFilesAtPath(
-            FileList,
-            *PakFile.GetMountPoint(),
-            true,
-            false,
-            true);
+        PakFile.FindFilesAtPath(FileList, *PakFile.GetMountPoint(),
+				true, false, true);
 
-        TArray<FSoftObjectPath> AssetsToLoad;
+	// Iterate over the collected files from the pak
+	for(auto asset : FileList)
+	{
+	    FString Package, BaseName, Extension;
+	    FPaths::Split(asset, Package, BaseName, Extension);
+	    FString ModifiedAssetName = Package / BaseName + "." + BaseName;
+	    // FIXME - this should test for the type rather than the name
+	    if( (BaseName.Find(T("material"))) ||
+		(BaseName.Find(T("model"))) )
+	    {
+		LOG("Trying to load %s as %s ", *asset, *ModifiedAssetName);
+		StreamableManager.LoadSynchronous(ModifiedAssetName, true, nullptr);
+	    }
+	}
 
-        for (auto assetPath : FileList)
-        {
-            FString sn, x, noop, subpath, base, ap, bp;
-
-            // Skip assets that don't fit the pattern
-            if (pattern.IsMatch(assetPath) == false)
-                continue;
-
-            FPackageName::GetShortName(*assetPath).Split(T("."), &sn, &noop);
-            assetPath.Split(*mountPath, &base, &subpath);
-
-            // Calculate the asset game directory.
-            ap = mountPath;
-            ap /= subpath;
-            ap.Split(T("/"), &x, &noop,
-                ESearchCase::CaseSensitive,
-                ESearchDir::FromEnd);
-            ap = x.Replace(UTF8_TO_TCHAR("Content"), UTF8_TO_TCHAR("Game"));
-            ap /= FString::Printf(T("%s.%s"), *sn, *sn);
-
-            // Create the directory before importing the asset.
-            bp = FPaths::ProjectDir() + x;
-            FPaths::MakeStandardFilename(bp);
-            if (!FPlatformFileManager::Get().GetPlatformFile().DirectoryExists(*bp))
-            {
-                if (!FPlatformFileManager::Get().GetPlatformFile().CreateDirectoryTree(*bp))
-                {
-                    LOG("Could not create dir %s", *bp);
-                    ret = -1; goto exit;
-                }
-                LOG("Created directory: %s", *bp);
-            }
-
-            // Add to the list of assets to load
-            AssetsToLoad.Add(ap);
-        }
-
-        // Is there anything to load?
-        if (AssetsToLoad.Num() < 1)
-        {
-            ret = -1; goto exit;
-        }
-
-        // Dispatch batch load request
-        TSharedPtr<FStreamableHandle> Request = StreamableManager.RequestSyncLoad(AssetsToLoad);
-
-        LOG("Waiting for pak load request to complete", NULL);
-        EAsyncPackageState::Type Result = Request->WaitUntilComplete();
-        if (Result != EAsyncPackageState::Complete)
-        {
-            ret = -1; goto exit;
-        }
-        LOG("Requested pak load done", NULL);
+	// Restore the platform file
+	FPlatformFileManager::Get().SetPlatformFile(*originalPlatform);
     }
     else
     {
-        LOG("%s", "mount failed!");
-        ret = -1; goto exit;
+	LOG("%s", "mount failed!");
+	ret = -1; return -1;
     }
 
-exit:
-    FPlatformFileManager::Get().SetPlatformFile(PlatformFile);
     return ret;
 }
 
@@ -333,7 +266,9 @@ ev_handler(struct mg_connection* conn, int ev, void *ev_data)
             AssetRegistry.Get().GetAllAssets(AssetData);
             for (auto data : AssetData)
             {
-                LOG("%s", *(data.PackageName.ToString()));
+		FString path = *(data.PackageName.ToString());
+		FPaths::MakePlatformFilename(path);
+                LOG("%s %s", *(data.PackageName.ToString()), *path);
             }
             goto OK;
         }
@@ -462,7 +397,7 @@ ev_handler(struct mg_connection* conn, int ev, void *ev_data)
                     return;
 
                 LOG("Mounting pak file: %s into %s wildcard %s", *pakPath, *mountPoint, *pattern);
-                if (mountPakFile(pakPath, mountPoint, pattern) < 0)
+                if (URCHTTP::mountPakFile(pakPath) < 0)
                     goto ERROR;
 
                 goto OK;

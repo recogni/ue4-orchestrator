@@ -13,9 +13,6 @@ public class UE4Orchestrator : ModuleRules
         PrivateDependencyModuleNames.AddRange(
             new string[]
             {
-                "Core",
-                "CoreUObject",
-                "Engine",
                 "Sockets",
                 "StreamingFile",
                 "LevelEditor",
@@ -34,7 +31,7 @@ public class UE4Orchestrator : ModuleRules
             new string[] {
                 "Core",
                 "CoreUObject", // @todo Mac: for some reason it's needed to link in debug on Mac
-				"Engine",
+		"Engine",
                 "PakFile",
                 "Sockets",
                 "StreamingFile",
