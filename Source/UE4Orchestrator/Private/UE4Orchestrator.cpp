@@ -71,7 +71,7 @@ int URCHTTP::mountPakFile(const FString& pakPath)
     FPlatformFileManager::Get().SetPlatformFile(*PakFileMgr);
 
     // Get the mount point from the Pak meta-data
-    static FPakFile PakFile(PakFileMgr, *pakPath, false);
+    FPakFile PakFile(PakFileMgr, *pakPath, false);
     FString MountPoint = PakFile.GetMountPoint();
 
     // Determine where the on-disk path is for the mountpoint and register it
