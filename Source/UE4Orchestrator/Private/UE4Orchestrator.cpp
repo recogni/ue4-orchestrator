@@ -16,7 +16,6 @@
 #include "FileManagerGeneric.h"
 #include "StreamingNetworkPlatformFile.h"
 #include "Runtime/AssetRegistry/Public/AssetRegistryModule.h"
-#include "Runtime/Json/Public/Dom/JsonObject.h"
 #include "Runtime/Core/Public/Misc/WildcardString.h"
 #include "Runtime/Engine/Classes/Engine/StreamableManager.h"
 #include "Runtime/Engine/Classes/Engine/AssetManager.h"
@@ -42,7 +41,7 @@ debugFn(FString payload)
 
 ////////////////////////////////////////////////////////////////////////////////
 
-int URCHTTP::mountPakFile(const FString& pakPath)
+int URCHTTP::mountPakFile(const FString& pakPath, bool bLoadContents)
 {
     int ret = 0;
     IPlatformFile *originalPlatform = &FPlatformFileManager::Get().GetPlatformFile();
@@ -56,7 +55,7 @@ int URCHTTP::mountPakFile(const FString& pakPath)
 
     // Allocate a new platform PAK object
     // FIXME - this leaks but it may not matter
-    FPakPlatformFile *PakFileMgr = new FPakPlatformFile();
+    FPakPlatformFile *PakFileMgr = &PakFileMgr_o;
     if (PakFileMgr == nullptr)
     {
         LOG("Failed to create platform file %s", T("PakFile"));
@@ -90,22 +89,25 @@ int URCHTTP::mountPakFile(const FString& pakPath)
         {
             Manager->GetAssetRegistry().SearchAllAssets(true);
 
-            TArray<FString> FileList;
-            PakFile.FindFilesAtPath(FileList, *PakFile.GetMountPoint(),
-                        true, false, true);
-
-            // Iterate over the collected files from the pak
-            for (auto asset : FileList)
+            if(bLoadContents)
             {
-                FString Package, BaseName, Extension;
-                FPaths::Split(asset, Package, BaseName, Extension);
-                FString ModifiedAssetName = Package / BaseName + "." + BaseName;
+                TArray<FString> FileList;
+                PakFile.FindFilesAtPath(FileList, *PakFile.GetMountPoint(),
+                            true, false, true);
 
-                // FIXME - this should test for the type rather than the name
-                if (BaseName.Find(T("material")) || BaseName.Find(T("model")))
+                // Iterate over the collected files from the pak
+                for (auto asset : FileList)
                 {
-                    LOG("Trying to load %s as %s ", *asset, *ModifiedAssetName);
-                    Manager->GetStreamableManager().LoadSynchronous(ModifiedAssetName, true, nullptr);
+                    FString Package, BaseName, Extension;
+                    FPaths::Split(asset, Package, BaseName, Extension);
+                    FString ModifiedAssetName = Package / BaseName + "." + BaseName;
+
+                    // FIXME - this should test for the type rather than the name
+                    if (BaseName.Find(T("material")) || BaseName.Find(T("model")))
+                    {
+                        LOG("Trying to load %s as %s ", *asset, *ModifiedAssetName);
+                        Manager->GetStreamableManager().LoadSynchronous(ModifiedAssetName, true, nullptr);
+                    }
                 }
             }
         }
@@ -128,6 +130,59 @@ int URCHTTP::mountPakFile(const FString& pakPath)
     return ret;
 }
 
+int URCHTTP::loadObject(const FString& assetPath)
+{
+
+    int ret = -1;
+    IPlatformFile *originalPlatform = &FPlatformFileManager::Get().GetPlatformFile();
+
+    FPakPlatformFile *PakFileMgr = &PakFileMgr_o;
+    if (PakFileMgr == nullptr)
+    {
+        LOG("Failed to create platform file %s", T("PakFile"));
+        return -1;
+    }
+
+    // The pak reader is now the current platform file
+    FPlatformFileManager::Get().SetPlatformFile(*PakFileMgr);
+
+    if (UAssetManager* Manager = UAssetManager::GetIfValid())
+    {
+        if(!FindObject< UStaticMesh>(ANY_PACKAGE,*assetPath))
+        {
+            if(Manager->GetStreamableManager().LoadSynchronous(assetPath, true, nullptr) == nullptr)
+                ret = -1;
+            else
+                ret = 0;
+        } else
+        {
+            ret = 0;
+        }
+    }
+
+    FPlatformFileManager::Get().SetPlatformFile(*originalPlatform);
+    return ret;
+}
+
+
+int URCHTTP::unloadObject(const FString& assetPath)
+{
+    int ret = -1;
+
+    if (UAssetManager* Manager = UAssetManager::GetIfValid())
+    {
+        if(FindObject< UStaticMesh>(ANY_PACKAGE,*assetPath))
+        {
+            Manager->GetStreamableManager().Unload(assetPath);
+            ret = 0;
+        } else
+        {
+            LOG("Tried to unload %s but it isn't loaded", *assetPath);
+        }
+    }
+
+    return ret;
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -354,41 +409,83 @@ ev_handler(struct mg_connection* conn, int ev, void *ev_data)
          *  POST body should contain a comma separated list of the following two
          *  arguments:
          *  1. Local .pak file path to mount into the engine.
-         *  2. The mount point to load it at.
-         *  3. (optional) wildcard pattern of assets to load (*,? form)
+         *  2. "all" or "none" to indicate if the pak's content should be loaded
+         *
          */
         else if (matches_any(&msg->uri, "/loadpak", "/ue4/loadpak"))
         {
             if (body.Len() > 0)
             {
-                TSharedPtr<FJsonObject> parsed;
-                auto reader = TJsonReaderFactory<TCHAR>::Create(*body);
+                int32 num_params;
+                TArray<FString> pak_options;
 
                 FString pakPath;
-                if (FJsonSerializer::Deserialize(reader, parsed))
-                {
-                    if (parsed->HasField("pak_path"))
-                        pakPath = parsed->GetStringField("pak_path");
-                }
-                else
-                {
-                    // JSON did not work, try the old method of using the
-                    // comma separated values.
-                    body.TrimEndInline();
 
-                    TArray<FString> pak_options;
-                    int32 num_params = body.ParseIntoArray(pak_options, T(","), true);
-                    pakPath = pak_options[0];
-                }
+                body.TrimEndInline();
+
+                num_params = body.ParseIntoArray(pak_options, T(","), true);
+                pakPath = pak_options[0];
 
                 if (pakPath.Len() == 0)
-                    return;
+                    goto ERROR;
+
+                if (num_params != 2)
+                    goto ERROR;
 
                 LOG("Mounting pak file: %s", *pakPath);
-                if (URCHTTP::mountPakFile(pakPath) < 0)
+
+                if (URCHTTP::Get().mountPakFile(pakPath, pak_options[1] == T("all")) < 0)
                     goto ERROR;
 
                 goto OK;
+            }
+            goto BAD_ENTITY;
+        }
+
+        else if (matches_any(&msg->uri, "/loadobj", "/ue4/loadobj"))
+        {
+            if (body.Len() > 0)
+            {
+                body.TrimEndInline();
+
+                TArray<FString> objects;
+                int32 num_params = body.ParseIntoArray(objects, T(","), true);
+
+                if(num_params==1)
+                {
+                    if(URCHTTP::Get().loadObject(objects[0]) < 0)
+                    {
+                        goto ERROR;
+                    }
+                    else
+                    {
+                        goto OK;
+                    }
+                }
+            }
+            goto BAD_ENTITY;
+        }
+
+        else if (matches_any(&msg->uri, "/unloadobj", "/ue4/unloadobj"))
+        {
+            if (body.Len() > 0)
+            {
+                body.TrimEndInline();
+
+                TArray<FString> objects;
+                int32 num_params = body.ParseIntoArray(objects, T(","), true);
+
+                if(num_params==1)
+                {
+                    if(URCHTTP::Get().unloadObject(objects[0]) < 0)
+                    {
+                        goto ERROR;
+                    }
+                    else
+                    {
+                        goto OK;
+                    }
+                }
             }
             goto BAD_ENTITY;
         }

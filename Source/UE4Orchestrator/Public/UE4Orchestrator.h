@@ -44,7 +44,10 @@ class UE4ORCHESTRATOR_API URCHTTP : public FTickableGameObject
     int poll_ms;
 
     /* Pak file */
+    FPakPlatformFile PakFileMgr_o;
 
 public:
-    static int mountPakFile(const FString &);
+    int mountPakFile(const FString &, bool);
+    int loadObject(const FString &);
+    int unloadObject(const FString &);
 };
