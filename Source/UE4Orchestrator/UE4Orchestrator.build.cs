@@ -31,7 +31,7 @@ public class UE4Orchestrator : ModuleRules
             new string[] {
                 "Core",
                 "CoreUObject", // @todo Mac: for some reason it's needed to link in debug on Mac
-		"Engine",
+		        "Engine",
                 "PakFile",
                 "Sockets",
                 "StreamingFile",
@@ -43,6 +43,20 @@ public class UE4Orchestrator : ModuleRules
                 "AssetTools",
             }
         );
+
+        PrivateIncludePaths.AddRange(
+            new string[] {
+                "UE4Orchestrator/Private",
+                // ... add other private include paths required here ...
+            }
+            );
+
+        PublicIncludePaths.AddRange(
+            new string[] {
+                "UE4Orchestrator/Public",
+                // ... add other private include paths required here ...
+            }
+            );
 
         if (Target.bBuildEditor)
         {

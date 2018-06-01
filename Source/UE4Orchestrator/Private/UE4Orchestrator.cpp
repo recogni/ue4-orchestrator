@@ -4,9 +4,9 @@
  *  UE4Orchestrator.h acts as the PCH for this project and must be the
  *  very first file imported.
  */
-
-
 #include "UE4Orchestrator.h"
+
+
 #include <vector>
 #include <string>
 
@@ -28,8 +28,12 @@
 #  include "Editor/UnrealEd/Public/LevelEditorViewport.h"
 #endif
 
+
+#include "UE4OrchestratorPrivate.h"
+
 // HTTP server
 #include "mongoose.h"
+#include "UE4Orchestrator_types.h"
 
 ////////////////////////////////////////////////////////////////////////////////
 

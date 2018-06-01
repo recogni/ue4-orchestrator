@@ -1,53 +1,38 @@
-/* -*- mode: c; tab-width: 4; indent-tabs-mode: nil; -*- */
-
 #pragma once
 
-// Logging stuff ...
-DECLARE_LOG_CATEGORY_EXTERN(LogUE4Orc, Log, All);
+#include "CoreMinimal.h"
+#include "Modules/ModuleInterface.h"
+#include "Modules/ModuleManager.h"
 
-#include "mongoose.h"
-#include "types.h"
+/**
+* The public interface to this module.  In most cases, this interface is only public to sibling modules
+* within this plugin.
+*/
 
-class UE4ORCHESTRATOR_API URCHTTP : public FTickableGameObject
+class IUE4OrchestratorPlugin : public IModuleInterface
 {
-  public:
-    URCHTTP();
-    ~URCHTTP();
+    /**
+    * Singleton-like access to this module's interface.  This is just for convenience!
+    * Beware of calling this during the shutdown phase, though.  Your module might have been unloaded already.
+    *
+    * @return Returns singleton instance, loading the module on demand if needed
+    */
+    static inline IUE4OrchestratorPlugin& Get()
+    {
+        return FModuleManager::LoadModuleChecked< IUE4OrchestratorPlugin >( "UE4Orchestrator" );
+    }
 
-    void Init();
-
-    static URCHTTP& Get();
-
-    /*
-     *  FTickableObject interface.
-     */
-    virtual void    Tick(float dt)                  override;
-    virtual TStatId GetStatId()             const   override;
-    virtual bool    IsTickable()            const { return true; }
-    virtual bool    IsTickableWhenPaused()  const { return true; }
-    virtual bool    IsTickableInEditor()    const { return true; }
-
-    void SetPollInterval(int v);
-
-  private:
-    struct mg_mgr         mgr;
-    struct mg_connection* conn;
-
-    /*
-     *  The poll_interval dictates how often we wish to poll.  If
-     *  this is set to 0 (default), it will invoke a poll of
-     *  `poll_ms` (default=1ms) each time this plugin gets a tick.
-     *  However, if this is set to N (N > 0), this will only call
-     *  poll once every N ticks.
-     */
-    int poll_interval;
-    int poll_ms;
-
-    /* Pak file */
-    FPakPlatformFile PakFileMgr_o;
+    /**
+    * Checks to see if this module is loaded and ready.  It is only valid to call Get() if IsAvailable() returns true.
+    *
+    * @return True if the module is loaded and ready to use
+    */
+    static inline bool IsAvailable()
+    {
+        return FModuleManager::Get().IsModuleLoaded( "UE4Orchestrator" );
+    }
 
 public:
-    int mountPakFile(const FString &, bool);
-    int loadObject(const FString &);
-    int unloadObject(const FString &);
+    virtual bool LoadObject(FString &path);
+    virtual bool UnLoadObject(FString &path);
 };
