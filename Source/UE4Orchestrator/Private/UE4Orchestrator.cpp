@@ -6,7 +6,6 @@
  */
 #include "UE4Orchestrator.h"
 
-
 #include <vector>
 #include <string>
 
@@ -28,12 +27,10 @@
 #  include "Editor/UnrealEd/Public/LevelEditorViewport.h"
 #endif
 
-
 #include "UE4OrchestratorPrivate.h"
 
 // HTTP server
 #include "mongoose.h"
-#include "UE4Orchestrator_types.h"
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -550,15 +547,18 @@ ev_handler(struct mg_connection* conn, int ev, void *ev_data)
 URCHTTP&
 URCHTTP::Get()
 {
-    static URCHTTP Singleton;
-    return Singleton;
+    static URCHTTP* Singleton;
+    if (!Singleton)
+        Singleton = NewObject<URCHTTP>();
+
+    return *Singleton;
 }
 
 
 ////////////////////////////////////////////////////////////////////////////////
 
-URCHTTP::URCHTTP()
-    : poll_interval(0), poll_ms(1)
+URCHTTP::URCHTTP(const FObjectInitializer& oi)
+    : Super(oi), poll_interval(0), poll_ms(1)
 {
 }
 
@@ -600,5 +600,25 @@ URCHTTP::GetStatId() const
 {
     RETURN_QUICK_DECLARE_CYCLE_STAT(URCHTTP, STATGROUP_Tickables);
 }
+
+void
+URCHTTP::Serialize(FArchive& ar)
+{
+    Super::Serialize(ar);
+}
+
+void
+URCHTTP::PostLoad()
+{
+    Super::PostLoad();
+}
+
+#if WITH_EDITOR
+void
+URCHTTP::PostEditChangeProperty(FPropertyChangedEvent& evt)
+{
+    Super::PostEditChangeProperty(evt);
+}
+#endif
 
 ////////////////////////////////////////////////////////////////////////////////
