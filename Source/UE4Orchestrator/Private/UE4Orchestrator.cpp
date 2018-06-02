@@ -42,7 +42,8 @@ debugFn(FString payload)
 
 ////////////////////////////////////////////////////////////////////////////////
 
-int URCHTTP::mountPakFile(const FString& pakPath, bool bLoadContents)
+int
+URCHTTP::MountPakFile(const FString& pakPath, bool bLoadContent)
 {
     int ret = 0;
     IPlatformFile *originalPlatform = &FPlatformFileManager::Get().GetPlatformFile();
@@ -83,14 +84,14 @@ int URCHTTP::mountPakFile(const FString& pakPath, bool bLoadContents)
 
     LOG("Mounting at %s and registering mount point %s at %s", *MountPointFull, *MountPoint, *PathOnDisk);
 
-    if(PakFileMgr->Mount(*pakPath, 0, *MountPointFull))
+    if (PakFileMgr->Mount(*pakPath, 0, *MountPointFull))
     {
         LOG("Mount %s success", *MountPoint);
         if (UAssetManager* Manager = UAssetManager::GetIfValid())
         {
             Manager->GetAssetRegistry().SearchAllAssets(true);
 
-            if(bLoadContents)
+            if (bLoadContent)
             {
                 TArray<FString> FileList;
                 PakFile.FindFilesAtPath(FileList, *PakFile.GetMountPoint(),
@@ -131,7 +132,8 @@ int URCHTTP::mountPakFile(const FString& pakPath, bool bLoadContents)
     return ret;
 }
 
-int URCHTTP::loadObject(const FString& assetPath)
+int
+URCHTTP::LoadObject(const FString& assetPath)
 {
 
     int ret = -1;
@@ -149,16 +151,15 @@ int URCHTTP::loadObject(const FString& assetPath)
 
     if (UAssetManager* Manager = UAssetManager::GetIfValid())
     {
-        if(!FindObject< UStaticMesh>(ANY_PACKAGE,*assetPath))
+        if (!FindObject< UStaticMesh>(ANY_PACKAGE,*assetPath))
         {
-            if(Manager->GetStreamableManager().LoadSynchronous(assetPath, true, nullptr) == nullptr)
+            if (Manager->GetStreamableManager().LoadSynchronous(assetPath, true, nullptr) == nullptr)
                 ret = -1;
             else
                 ret = 0;
-        } else
-        {
-            ret = 0;
         }
+        else
+            ret = 0;
     }
 
     FPlatformFileManager::Get().SetPlatformFile(*originalPlatform);
@@ -166,20 +167,20 @@ int URCHTTP::loadObject(const FString& assetPath)
 }
 
 
-int URCHTTP::unloadObject(const FString& assetPath)
+int
+URCHTTP::UnloadObject(const FString& assetPath)
 {
     int ret = -1;
 
     if (UAssetManager* Manager = UAssetManager::GetIfValid())
     {
-        if(FindObject< UStaticMesh>(ANY_PACKAGE,*assetPath))
+        if (FindObject< UStaticMesh>(ANY_PACKAGE,*assetPath))
         {
             Manager->GetStreamableManager().Unload(assetPath);
             ret = 0;
-        } else
-        {
-            LOG("Tried to unload %s but it isn't loaded", *assetPath);
         }
+        else
+            LOG("Tried to unload %s but it isn't loaded", *assetPath);
     }
 
     return ret;
@@ -435,7 +436,7 @@ ev_handler(struct mg_connection* conn, int ev, void *ev_data)
 
                 LOG("Mounting pak file: %s", *pakPath);
 
-                if (URCHTTP::Get().mountPakFile(pakPath, pak_options[1] == T("all")) < 0)
+                if (URCHTTP::Get().MountPakFile(pakPath, pak_options[1] == T("all")) < 0)
                     goto ERROR;
 
                 goto OK;
@@ -452,9 +453,9 @@ ev_handler(struct mg_connection* conn, int ev, void *ev_data)
                 TArray<FString> objects;
                 int32 num_params = body.ParseIntoArray(objects, T(","), true);
 
-                if(num_params==1)
+                if (num_params==1)
                 {
-                    if(URCHTTP::Get().loadObject(objects[0]) < 0)
+                    if (URCHTTP::Get().LoadObject(objects[0]) < 0)
                     {
                         goto ERROR;
                     }
@@ -476,9 +477,9 @@ ev_handler(struct mg_connection* conn, int ev, void *ev_data)
                 TArray<FString> objects;
                 int32 num_params = body.ParseIntoArray(objects, T(","), true);
 
-                if(num_params==1)
+                if (num_params==1)
                 {
-                    if(URCHTTP::Get().unloadObject(objects[0]) < 0)
+                    if (URCHTTP::Get().UnloadObject(objects[0]) < 0)
                     {
                         goto ERROR;
                     }
@@ -549,7 +550,9 @@ URCHTTP::Get()
 {
     static URCHTTP* Singleton;
     if (!Singleton)
+    {
         Singleton = NewObject<URCHTTP>();
+    }
 
     return *Singleton;
 }
@@ -590,9 +593,14 @@ void
 URCHTTP::Tick(float dt)
 {
     static int tick_counter = 0;
+    if (tick_counter == 0)
+        Init();
 
     if (poll_interval == 0 || (tick_counter++ % poll_interval) == 0)
         mg_mgr_poll(&mgr, poll_ms);
+
+    if (tick_counter == 0)
+        tick_counter++;
 }
 
 TStatId
@@ -611,6 +619,12 @@ void
 URCHTTP::PostLoad()
 {
     Super::PostLoad();
+}
+
+void
+URCHTTP::PostInitProperties()
+{
+    Super::PostInitProperties();
 }
 
 #if WITH_EDITOR

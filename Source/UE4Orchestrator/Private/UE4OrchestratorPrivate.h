@@ -74,6 +74,7 @@ class UE4ORCHESTRATOR_API URCHTTP : public UObject, public FTickableGameObject
      */
     virtual void Serialize(FArchive& ar) override;
     virtual void PostLoad() override;
+    virtual void PostInitProperties() override;
 #if WITH_EDITOR
     virtual void PostEditChangeProperty(FPropertyChangedEvent& evt) override;
 #endif
@@ -81,6 +82,7 @@ class UE4ORCHESTRATOR_API URCHTTP : public UObject, public FTickableGameObject
     void SetPollInterval(int v);
 
   private:
+
     struct mg_mgr         mgr;
     struct mg_connection* conn;
 
@@ -94,11 +96,19 @@ class UE4ORCHESTRATOR_API URCHTTP : public UObject, public FTickableGameObject
     int poll_interval;
     int poll_ms;
 
-    /* Pak file */
+    /*
+     *  Pak file.
+     */
     FPakPlatformFile PakFileMgr_o;
 
-public:
-    int mountPakFile(const FString &, bool);
-    int loadObject(const FString &);
-    int unloadObject(const FString &);
+  public:
+
+    UFUNCTION()
+    int MountPakFile(const FString& PakPath, bool bLoadContent);
+
+    UFUNCTION()
+    int LoadObject(const FString& ObjectPath);
+
+    UFUNCTION()
+    int UnloadObject(const FString& ObjectPath);
 };
