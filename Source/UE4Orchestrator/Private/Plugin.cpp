@@ -31,11 +31,11 @@ FUE4OrchestratorPlugin::ShutdownModule()
 bool
 FUE4OrchestratorPlugin::LoadObject(FString &Path)
 {
-    return (URCHTTP::Get().loadObject(Path) == 0);
+    return (URCHTTP::Get().LoadObject(Path) == 0);
 }
 
 bool
 FUE4OrchestratorPlugin::UnLoadObject(FString &Path)
 {
-    return (URCHTTP::Get().unloadObject(Path) == 0);
+    return (URCHTTP::Get().UnloadObject(Path) == 0);
 }
