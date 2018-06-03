@@ -1,38 +1,53 @@
+/* -*- mode: c; tab-width: 4; indent-tabs-mode: nil; -*- */
+
 #pragma once
 
 #include "CoreMinimal.h"
 #include "Modules/ModuleInterface.h"
 #include "Modules/ModuleManager.h"
 
-/**
-* The public interface to this module.  In most cases, this interface is only public to sibling modules
-* within this plugin.
-*/
+// Logging stuff ...
+DECLARE_LOG_CATEGORY_EXTERN(LogUE4Orc, Log, All);
 
-class IUE4OrchestratorPlugin : public IModuleInterface
+#include "mongoose.h"
+
+// UE4
+#include "IPlatformFilePak.h"
+#include "FileManagerGeneric.h"
+#include "StreamingNetworkPlatformFile.h"
+#include "Runtime/AssetRegistry/Public/AssetRegistryModule.h"
+#include "Modules/ModuleInterface.h"
+
+#if WITH_EDITOR
+#  include "LevelEditor.h"
+#  include "Editor.h"
+#  include "Editor/LevelEditor/Public/ILevelViewport.h"
+#  include "Editor/LevelEditor/Public/LevelEditorActions.h"
+#  include "Editor/UnrealEd/Public/LevelEditorViewport.h"
+#endif
+
+////////////////////////////////////////////////////////////////////////////////
+
+typedef struct mg_str               mg_str_t;
+typedef struct http_message         http_message_t;
+typedef FModuleManager              FManager;
+typedef FActorComponentTickFunction FTickFn;
+
+#if WITH_EDITOR
+  typedef FLevelEditorModule        FLvlEditor;
+#endif
+
+#define T                   TEXT
+#define LOG(fmt, ...)       UE_LOG(LogUE4Orc, Log, TEXT(fmt), __VA_ARGS__)
+
+////////////////////////////////////////////////////////////////////////////////
+
+class FUE4OrchestratorPlugin : public IModuleInterface
 {
-    /**
-    * Singleton-like access to this module's interface.  This is just for convenience!
-    * Beware of calling this during the shutdown phase, though.  Your module might have been unloaded already.
-    *
-    * @return Returns singleton instance, loading the module on demand if needed
-    */
-    static inline IUE4OrchestratorPlugin& Get()
-    {
-        return FModuleManager::LoadModuleChecked< IUE4OrchestratorPlugin >( "UE4Orchestrator" );
-    }
+    virtual void    StartupModule()     override;
+    virtual void    ShutdownModule()    override;
 
-    /**
-    * Checks to see if this module is loaded and ready.  It is only valid to call Get() if IsAvailable() returns true.
-    *
-    * @return True if the module is loaded and ready to use
-    */
-    static inline bool IsAvailable()
-    {
-        return FModuleManager::Get().IsModuleLoaded( "UE4Orchestrator" );
-    }
-
-public:
-    virtual bool LoadObject(FString &path);
-    virtual bool UnLoadObject(FString &path);
+  public:
+    virtual bool    LoadObject(FString &Path);
+    virtual bool    UnLoadObject(FString &Path);
 };
