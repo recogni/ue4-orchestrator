@@ -55,18 +55,13 @@ URCHTTP::MountPakFile(const FString& pakPath, bool bLoadContent)
         return -1;
     }
 
-    // Allocate a new platform PAK object
-    // FIXME - this leaks but it may not matter
-    FPakPlatformFile *PakFileMgr = &PakFileMgr_o;
     if (PakFileMgr == nullptr)
     {
-        LOG("Failed to create platform file %s", T("PakFile"));
-        return -1;
+        PakFileMgr =  new FPakPlatformFile;
+        // Initialize the lower level file from the previous top layer
+        PakFileMgr->Initialize(&FPlatformFileManager::Get().GetPlatformFile(),T(""));
+        PakFileMgr->InitializeNewAsyncIO();
     }
-
-    // Initialize the lower level file from the previous top layer
-    PakFileMgr->Initialize(&FPlatformFileManager::Get().GetPlatformFile(),T(""));
-    PakFileMgr->InitializeNewAsyncIO();
 
     // The pak reader is now the current platform file
     FPlatformFileManager::Get().SetPlatformFile(*PakFileMgr);
@@ -104,12 +99,8 @@ URCHTTP::MountPakFile(const FString& pakPath, bool bLoadContent)
                     FPaths::Split(asset, Package, BaseName, Extension);
                     FString ModifiedAssetName = Package / BaseName + "." + BaseName;
 
-                    // FIXME - this should test for the type rather than the name
-                    if (BaseName.Find(T("material")) || BaseName.Find(T("model")))
-                    {
-                        LOG("Trying to load %s as %s ", *asset, *ModifiedAssetName);
-                        Manager->GetStreamableManager().LoadSynchronous(ModifiedAssetName, true, nullptr);
-                    }
+                    LOG("Trying to load %s as %s ", *asset, *ModifiedAssetName);
+                    Manager->GetStreamableManager().LoadSynchronous(ModifiedAssetName, true, nullptr);
                 }
             }
         }
@@ -139,7 +130,6 @@ URCHTTP::LoadObject(const FString& assetPath)
     int ret = -1;
     IPlatformFile *originalPlatform = &FPlatformFileManager::Get().GetPlatformFile();
 
-    FPakPlatformFile *PakFileMgr = &PakFileMgr_o;
     if (PakFileMgr == nullptr)
     {
         LOG("Failed to create platform file %s", T("PakFile"));
@@ -579,6 +569,9 @@ URCHTTP::Init()
     mg_mgr_init(&mgr, NULL);
     conn = mg_bind(&mgr, "18820", ev_handler);
     mg_set_protocol_http_websocket(conn);
+
+    // Initialize .pak file reader
+    PakFileMgr = nullptr;
 }
 
 void

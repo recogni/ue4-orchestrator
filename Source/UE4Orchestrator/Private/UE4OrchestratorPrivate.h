@@ -57,7 +57,7 @@ class UE4ORCHESTRATOR_API URCHTTP : public UObject, public FTickableGameObject
     /*
      *  Pak file.
      */
-    FPakPlatformFile PakFileMgr_o;
+    FPakPlatformFile *PakFileMgr;
 
   public:
 
