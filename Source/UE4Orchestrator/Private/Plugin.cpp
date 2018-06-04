@@ -17,9 +17,6 @@ void
 FUE4OrchestratorPlugin::StartupModule()
 {
     UE_LOG(LogUE4Orc, Log, TEXT("UE4Orchestrator::StartupModule"));
-
-    URCHTTP &server = URCHTTP::Get();
-    server.Init();
 }
 
 void
