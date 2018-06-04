@@ -551,6 +551,8 @@ URCHTTP::Get()
 URCHTTP::URCHTTP(const FObjectInitializer& oi)
     : Super(oi), poll_interval(0), poll_ms(1)
 {
+    // Initialize .pak file reader
+    PakFileMgr = nullptr;
 }
 
 
@@ -569,9 +571,6 @@ URCHTTP::Init()
     mg_mgr_init(&mgr, NULL);
     conn = mg_bind(&mgr, "18820", ev_handler);
     mg_set_protocol_http_websocket(conn);
-
-    // Initialize .pak file reader
-    PakFileMgr = nullptr;
 }
 
 void
