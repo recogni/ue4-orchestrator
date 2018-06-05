@@ -18,6 +18,7 @@
 #include "Runtime/Core/Public/Misc/WildcardString.h"
 #include "Runtime/Engine/Classes/Engine/StreamableManager.h"
 #include "Runtime/Engine/Classes/Engine/AssetManager.h"
+#include "Runtime/Engine/Public/ShaderCompiler.h"
 
 #if WITH_EDITOR
 #  include "LevelEditor.h"
@@ -120,6 +121,8 @@ URCHTTP::MountPakFile(const FString& pakPath, bool bLoadContent)
     // Restore the platform file
     FPlatformFileManager::Get().SetPlatformFile(*originalPlatform);
 
+    FinishAllShaderCompilation();
+    
     return ret;
 }
 
@@ -153,6 +156,9 @@ URCHTTP::LoadObject(const FString& assetPath)
     }
 
     FPlatformFileManager::Get().SetPlatformFile(*originalPlatform);
+
+    FinishAllShaderCompilation();
+    
     return ret;
 }
 
@@ -174,6 +180,14 @@ URCHTTP::UnloadObject(const FString& assetPath)
     }
 
     return ret;
+}
+
+void
+URCHTTP::FinishAllShaderCompilation() {
+    if (GShaderCompilingManager != nullptr)
+    {
+        GShaderCompilingManager->FinishAllCompilation();
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////

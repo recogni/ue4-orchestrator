@@ -50,4 +50,5 @@ class FUE4OrchestratorPlugin : public IModuleInterface
   public:
     virtual bool    LoadObject(FString &Path);
     virtual bool    UnLoadObject(FString &Path);
+    virtual void    FinishAllShaderCompilation();
 };

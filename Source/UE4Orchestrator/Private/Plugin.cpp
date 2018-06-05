@@ -36,3 +36,9 @@ FUE4OrchestratorPlugin::UnLoadObject(FString& Path)
 {
     return (URCHTTP::Get().UnloadObject(Path) == 0);
 }
+
+void
+FUE4OrchestratorPlugin::FinishAllShaderCompilation()
+{
+  return (URCHTTP::Get().FinishAllShaderCompilation());
+}
