@@ -286,6 +286,17 @@ ev_handler(struct mg_connection* conn, int ev, void *ev_data)
         }
 
         /*
+         *  HTTP GET /shutdown-now
+         *
+         *  Trigger an editor immediate (possibly unclean) shutdown.
+         */
+        else if (matches_any(&msg->uri, "/shutdown-now", "/ue4/shutdown-now"))
+        {
+            FGenericPlatformMisc::RequestExit(true);
+            goto OK;
+        }
+        
+        /*
          *  HTTP GET /shutdown
          *
          *  Trigger an editor shutdown.
