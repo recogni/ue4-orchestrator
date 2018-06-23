@@ -145,10 +145,14 @@ URCHTTP::LoadObject(const FString& assetPath)
     {
         if (!FindObject< UStaticMesh>(ANY_PACKAGE,*assetPath))
         {
-            if (Manager->GetStreamableManager().LoadSynchronous(assetPath, true, nullptr) == nullptr)
+            UObject *object = Manager->GetStreamableManager().LoadSynchronous(assetPath, true, nullptr);
+            if (object == nullptr)
                 ret = -1;
             else
+            {
+                LoadedAssetMap.Add(assetPath, object);
                 ret = 0;
+            }
         }
         else
             ret = 0;
@@ -170,6 +174,11 @@ URCHTTP::UnloadObject(const FString& assetPath)
     {
         if (FindObject< UStaticMesh>(ANY_PACKAGE,*assetPath))
         {
+            if (UObject **object = LoadedAssetMap.Find(assetPath))
+            {
+                (*object)->ConditionalBeginDestroy();
+                LoadedAssetMap.Remove(assetPath);
+            }
             Manager->GetStreamableManager().Unload(assetPath);
             ret = 0;
         }

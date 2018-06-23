@@ -58,6 +58,8 @@ class UE4ORCHESTRATOR_API URCHTTP : public UObject, public FTickableGameObject
      */
     FPakPlatformFile *PakFileMgr;
 
+    TMap < FString, UObject * > LoadedAssetMap;
+    
   public:
 
     UFUNCTION()
