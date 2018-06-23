@@ -571,11 +571,8 @@ ev_handler(struct mg_connection* conn, int ev, void *ev_data)
 URCHTTP*
 URCHTTP::Get()
 {
-    static URCHTTP* Singleton;
-    if (!Singleton)
-        Singleton = NewObject<URCHTTP>();
-
-    return Singleton;
+    UObject *URCHTTP_cdo = URCHTTP::StaticClass()->GetDefaultObject(true);
+    return Cast<URCHTTP>(URCHTTP_cdo);
 }
 
 
