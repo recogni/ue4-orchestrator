@@ -122,14 +122,13 @@ URCHTTP::MountPakFile(const FString& pakPath, bool bLoadContent)
     FPlatformFileManager::Get().SetPlatformFile(*originalPlatform);
 
     FinishAllShaderCompilation();
-    
+
     return ret;
 }
 
 int
 URCHTTP::LoadObject(const FString& assetPath)
 {
-
     int ret = -1;
     IPlatformFile *originalPlatform = &FPlatformFileManager::Get().GetPlatformFile();
 
@@ -158,10 +157,9 @@ URCHTTP::LoadObject(const FString& assetPath)
     FPlatformFileManager::Get().SetPlatformFile(*originalPlatform);
 
     FinishAllShaderCompilation();
-    
+
     return ret;
 }
-
 
 int
 URCHTTP::UnloadObject(const FString& assetPath)
@@ -183,7 +181,8 @@ URCHTTP::UnloadObject(const FString& assetPath)
 }
 
 void
-URCHTTP::FinishAllShaderCompilation() {
+URCHTTP::FinishAllShaderCompilation()
+{
     if (GShaderCompilingManager != nullptr)
     {
         GShaderCompilingManager->FinishAllCompilation();
@@ -227,7 +226,7 @@ ev_handler(struct mg_connection* conn, int ev, void *ev_data)
     http_message_t* msg       = (http_message_t *)ev_data;
     mg_str_t        rspMsg    = STATUS_ERROR;
     int             rspStatus = 404;
-    URCHTTP&        server    = URCHTTP::Get();
+    URCHTTP*        server    = URCHTTP::Get();
 
 #if WITH_EDITOR
     auto ar = "AssetRegistry";
@@ -295,7 +294,7 @@ ev_handler(struct mg_connection* conn, int ev, void *ev_data)
             FGenericPlatformMisc::RequestExit(true);
             goto OK;
         }
-        
+
         /*
          *  HTTP GET /shutdown
          *
@@ -399,7 +398,7 @@ ev_handler(struct mg_connection* conn, int ev, void *ev_data)
             int x = FCString::Atoi(*body);
             if (x < 0)
                 x = 0;
-            server.SetPollInterval(x);
+            server->SetPollInterval(x);
             goto OK;
         }
 
@@ -451,7 +450,7 @@ ev_handler(struct mg_connection* conn, int ev, void *ev_data)
 
                 LOG("Mounting pak file: %s", *pakPath);
 
-                if (URCHTTP::Get().MountPakFile(pakPath, pak_options[1] == T("all")) < 0)
+                if (URCHTTP::Get()->MountPakFile(pakPath, pak_options[1] == T("all")) < 0)
                     goto ERROR;
 
                 goto OK;
@@ -470,7 +469,7 @@ ev_handler(struct mg_connection* conn, int ev, void *ev_data)
 
                 if (num_params==1)
                 {
-                    if (URCHTTP::Get().LoadObject(objects[0]) < 0)
+                    if (URCHTTP::Get()->LoadObject(objects[0]) < 0)
                     {
                         goto ERROR;
                     }
@@ -494,7 +493,7 @@ ev_handler(struct mg_connection* conn, int ev, void *ev_data)
 
                 if (num_params==1)
                 {
-                    if (URCHTTP::Get().UnloadObject(objects[0]) < 0)
+                    if (URCHTTP::Get()->UnloadObject(objects[0]) < 0)
                     {
                         goto ERROR;
                     }
@@ -560,14 +559,14 @@ ev_handler(struct mg_connection* conn, int ev, void *ev_data)
 
 ////////////////////////////////////////////////////////////////////////////////
 
-URCHTTP&
+URCHTTP*
 URCHTTP::Get()
 {
     static URCHTTP* Singleton;
     if (!Singleton)
         Singleton = NewObject<URCHTTP>();
 
-    return *Singleton;
+    return Singleton;
 }
 
 
@@ -580,12 +579,10 @@ URCHTTP::URCHTTP(const FObjectInitializer& oi)
     PakFileMgr = nullptr;
 }
 
-
 URCHTTP::~URCHTTP()
 {
     mg_mgr_free(&mgr);
 }
-
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -596,6 +593,12 @@ URCHTTP::Init()
     mg_mgr_init(&mgr, NULL);
     conn = mg_bind(&mgr, "18820", ev_handler);
     mg_set_protocol_http_websocket(conn);
+}
+
+void
+URCHTTP::StartServer(void)
+{
+    StartServerSignal = true;
 }
 
 void

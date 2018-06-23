@@ -16,7 +16,6 @@ class UE4ORCHESTRATOR_API URCHTTP : public UObject, public FTickableGameObject
   public:
 
     void Init();
-    static URCHTTP& Get();
 
     /*
      *  FTickableObject interface.
@@ -60,6 +59,12 @@ class UE4ORCHESTRATOR_API URCHTTP : public UObject, public FTickableGameObject
     FPakPlatformFile *PakFileMgr;
 
   public:
+
+    UFUNCTION()
+    static URCHTTP* Get();
+
+    UFUNCTION()
+    void StartServer();
 
     UFUNCTION()
     int MountPakFile(const FString& PakPath, bool bLoadContent);

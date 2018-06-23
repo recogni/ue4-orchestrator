@@ -39,16 +39,3 @@ typedef FActorComponentTickFunction FTickFn;
 
 #define T                   TEXT
 #define LOG(fmt, ...)       UE_LOG(LogUE4Orc, Log, TEXT(fmt), __VA_ARGS__)
-
-////////////////////////////////////////////////////////////////////////////////
-
-class FUE4OrchestratorPlugin : public IModuleInterface
-{
-    virtual void    StartupModule()     override;
-    virtual void    ShutdownModule()    override;
-
-  public:
-    virtual bool    LoadObject(FString &Path);
-    virtual bool    UnLoadObject(FString &Path);
-    virtual void    FinishAllShaderCompilation();
-};
