@@ -64,9 +64,6 @@ class UE4ORCHESTRATOR_API URCHTTP : public UObject, public FTickableGameObject
     static URCHTTP* Get();
 
     UFUNCTION()
-    void StartServer();
-
-    UFUNCTION()
     int MountPakFile(const FString& PakPath, bool bLoadContent);
 
     UFUNCTION()

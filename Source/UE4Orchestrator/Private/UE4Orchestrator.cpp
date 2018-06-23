@@ -596,12 +596,6 @@ URCHTTP::Init()
 }
 
 void
-URCHTTP::StartServer(void)
-{
-    StartServerSignal = true;
-}
-
-void
 URCHTTP::SetPollInterval(int v)
 {
     poll_interval = v;
