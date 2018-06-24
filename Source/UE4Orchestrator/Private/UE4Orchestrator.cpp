@@ -165,6 +165,8 @@ URCHTTP::LoadObject(const FString& assetPath)
     return ret;
 }
 
+//#define DEBUG_UNLOAD_OBJECT
+//#define FORCE_UNLOAD_GC
 int
 URCHTTP::UnloadObject(const FString& assetPath)
 {
@@ -172,19 +174,57 @@ URCHTTP::UnloadObject(const FString& assetPath)
 
     if (UAssetManager* Manager = UAssetManager::GetIfValid())
     {
-        if (FindObject< UStaticMesh>(ANY_PACKAGE,*assetPath))
+        if (UObject *found = FindObject< UStaticMesh>(ANY_PACKAGE,*assetPath))
         {
+
+#ifdef DEBUG_UNLOAD_OBJECT
+            FReferencerInformationList Referers;
+            bool is_refed;
+            is_refed = IsReferenced(found, EObjectFlags::RF_NoFlags,
+                EInternalObjectFlags::AllFlags, false, &Referers);
+
+            LOG("Is referenced for %s is %d", *assetPath, is_refed);
+
+            for ( int i = 0 ; i < 2 ; i++ ) {
+                TArray<UObject*> ReferredToObjects;
+    	        FReferenceFinder ObjectReferenceCollector( ReferredToObjects, found,
+                    false, true, true, false);
+    	        ObjectReferenceCollector.FindReferences( found );
+
+                LOG("__________Object GC %s round %d____________ ", *assetPath, i);
+                for (UObject* Each : ReferredToObjects)
+                {
+                    if (Each)
+                    {
+                        LOG("%s:%s", *assetPath, *Each->GetName());
+                        (Each)->ConditionalBeginDestroy();
+                    }
+                }
+
+#ifdef FORCE_UNLOAD_GC
+                CollectGarbage(RF_NoFlags, true);
+#endif
+                LOG("__________Object GC %s round %d____________ ", *assetPath, i);
+            }
+#endif
+
             if (UObject **object = LoadedAssetMap.Find(assetPath))
             {
-                (*object)->ConditionalBeginDestroy();
                 LoadedAssetMap.Remove(assetPath);
             }
             Manager->GetStreamableManager().Unload(assetPath);
+#ifdef FORCE_UNLOAD_GC
+            CollectGarbage(RF_NoFlags,true);
+#endif
             ret = 0;
         }
         else
             LOG("Tried to unload %s but it isn't loaded", *assetPath);
     }
+
+#ifdef FORCE_UNLOAD_GC
+    CollectGarbage(RF_NoFlags, true);
+#endif
 
     return ret;
 }
