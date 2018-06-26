@@ -149,7 +149,8 @@ URCHTTP::LoadObject(const FString& assetPath)
     {
         if (!FindObject< UStaticMesh>(ANY_PACKAGE,*assetPath))
         {
-            UObject *object = Manager->GetStreamableManager().LoadSynchronous(assetPath, true, nullptr);
+            // Depend on UE's GC
+            UObject *object = Manager->GetStreamableManager().LoadSynchronous(assetPath, false, nullptr);
             if (object == nullptr)
                 ret = -1;
             else
@@ -214,9 +215,11 @@ URCHTTP::UnloadObject(const FString& assetPath)
 
             if (UObject **object = LoadedAssetMap.Find(assetPath))
             {
+                // Assign to null to make it available for GC
+                *object = nullptr;
                 LoadedAssetMap.Remove(assetPath);
             }
-            Manager->GetStreamableManager().Unload(assetPath);
+            // Manager->GetStreamableManager().Unload(assetPath);
 #ifdef FORCE_UNLOAD_GC
             CollectGarbage(RF_NoFlags,true);
 #endif
