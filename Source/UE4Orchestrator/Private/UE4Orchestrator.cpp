@@ -142,8 +142,6 @@ URCHTTP::LoadObject(const FString& assetPath)
         return -1;
     }
 
-    LOG("Load object   %s", *assetPath);
-    
     // The pak reader is now the current platform file
     FPlatformFileManager::Get().SetPlatformFile(*PakFileMgr);
 
@@ -179,10 +177,9 @@ URCHTTP::UnloadObject(const FString& assetPath)
 {
     int ret = -1;
 
-    LOG("Unload object %s", *assetPath);
-
     if(LoadedAssetMap.Find(assetPath)) {
       LoadedAssetMap.Remove(assetPath);
+      ret = 0;
     }
 
     CollectGarbage(RF_NoFlags, true);
@@ -307,7 +304,7 @@ URCHTTP::PakTest()
   auto ar = "AssetRegistry";
   FAssetRegistryModule& AssetRegistry =
     FModuleManager::LoadModuleChecked<FAssetRegistryModule>(ar);
-  
+
   for (auto obj : obj_paths ) {
     LOG("Trying to load %s", *obj);
     LoadObject(*(obj + ".model_normalized") );
@@ -323,25 +320,25 @@ URCHTTP::PakTest()
         if( path.StartsWith(T("/Game/Import/ShapeNet"), ESearchCase::IgnoreCase) ) {
           LOG("%s %s %d", *(data.PackageName.ToString()), *path, AssetData.Num());
         }
-      }    
+      }
     LOG("---------------------------- %s Done --------------------------", T("Unload"));
-#endif      
+#endif
     LOG("Trying to unload %s", *obj);
     UnloadObject(*(obj + ".model_normalized") );
 
-#if 0    
+#if 0
     AssetRegistry.Get().GetAllAssets(AssetData);
     for (auto data : AssetData)
       {
         FString path = *(data.PackageName.ToString());
         FPaths::MakePlatformFilename(path);
-        if( path.StartsWith(T("/Game/Import/ShapeNet"), ESearchCase::IgnoreCase) ) {        
+        if( path.StartsWith(T("/Game/Import/ShapeNet"), ESearchCase::IgnoreCase) ) {
           LOG("%s %s %d", *(data.PackageName.ToString()), *path, AssetData.Num());
         }
-      }    
+      }
     LOG("---------------------------- %s Done --------------------------", T("Unload"));
-#endif    
-    
+#endif
+
   }
 
 
@@ -519,7 +516,11 @@ ev_handler(struct mg_connection* conn, int ev, void *ev_data)
         else if (matches_any(&msg->uri, "/paktest", "/pak_test")) {
           URCHTTP::Get()->PakTest();
         }
-        
+
+        else if (matches_any(&msg->uri, "/gc")) {
+            CollectGarbage(RF_NoFlags, true);
+        }
+
         /*
          *  HTTP GET /debug
          *
