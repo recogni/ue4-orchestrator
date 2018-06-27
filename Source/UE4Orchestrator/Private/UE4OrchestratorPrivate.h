@@ -58,9 +58,6 @@ class UE4ORCHESTRATOR_API URCHTTP : public UObject, public FTickableGameObject
      */
     FPakPlatformFile *PakFileMgr;
 
-    UPROPERTY()
-    TMap < FString, UObject * > LoadedAssetMap;
-    
   public:
 
     UFUNCTION()
@@ -69,15 +66,19 @@ class UE4ORCHESTRATOR_API URCHTTP : public UObject, public FTickableGameObject
     UFUNCTION()
     int MountPakFile(const FString& PakPath, bool bLoadContent);
 
+    /*
+     *  TODO: LoadObject should probably be renamed to LoadObjectPak() or
+     *        something to that effect.
+     */
     UFUNCTION()
-    int LoadObject(const FString& ObjectPath);
+    UObject* LoadObject(const FString& ObjectPath);
 
     UFUNCTION()
     int UnloadObject(const FString& ObjectPath);
 
     UFUNCTION()
-    void FinishAllShaderCompilation();
+    void GarbageCollect();
 
     UFUNCTION()
-    void PakTest();
+    void FinishAllShaderCompilation();
 };
