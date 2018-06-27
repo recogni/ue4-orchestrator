@@ -513,14 +513,6 @@ ev_handler(struct mg_connection* conn, int ev, void *ev_data)
             goto OK;
         }
 
-        else if (matches_any(&msg->uri, "/paktest", "/pak_test")) {
-          URCHTTP::Get()->PakTest();
-        }
-
-        else if (matches_any(&msg->uri, "/gc")) {
-            CollectGarbage(RF_NoFlags, true);
-        }
-
         /*
          *  HTTP GET /debug
          *
@@ -529,6 +521,18 @@ ev_handler(struct mg_connection* conn, int ev, void *ev_data)
         else if (matches_any(&msg->uri, "/debug", "/ue4/debug"))
         {
             debugFn("");
+            goto OK;
+        }
+
+        else if (matches_any(&msg->uri, "/paktest", "/pak_test"))
+        {
+            URCHTTP::Get()->PakTest();
+            goto OK;
+        }
+
+        else if (matches_any(&msg->uri, "/gc"))
+        {
+            CollectGarbage(RF_NoFlags, true);
             goto OK;
         }
 
