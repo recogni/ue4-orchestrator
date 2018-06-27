@@ -13,7 +13,7 @@ DECLARE_LOG_CATEGORY_EXTERN(LogUE4Orc, Log, All);
 
 // UE4
 #include "IPlatformFilePak.h"
-#include "FileManagerGeneric.h"
+#include "Runtime/Core/Public/HAL/FileManagerGeneric.h"
 #include "StreamingNetworkPlatformFile.h"
 #include "Runtime/AssetRegistry/Public/AssetRegistryModule.h"
 #include "Modules/ModuleInterface.h"

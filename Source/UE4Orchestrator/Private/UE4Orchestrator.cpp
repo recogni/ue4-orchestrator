@@ -12,7 +12,6 @@
 // UE4
 #include "CoreMinimal.h"
 #include "IPlatformFilePak.h"
-#include "FileManagerGeneric.h"
 #include "StreamingNetworkPlatformFile.h"
 #include "Runtime/AssetRegistry/Public/AssetRegistryModule.h"
 #include "Runtime/Core/Public/Misc/WildcardString.h"
