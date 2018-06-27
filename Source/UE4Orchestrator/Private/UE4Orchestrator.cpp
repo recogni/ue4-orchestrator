@@ -180,7 +180,11 @@ URCHTTP::UnloadObject(const FString& assetPath)
     int ret = -1;
 
     LOG("Unload object %s", *assetPath);
-    
+
+    if(LoadedAssetMap.Find(assetPath)) {
+      LoadedAssetMap.Remove(assetPath);
+    }
+
     CollectGarbage(RF_NoFlags, true);
 
     return ret;
