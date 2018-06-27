@@ -60,14 +60,6 @@ URCHTTP::MountPakFile(const FString& pakPath, bool bLoadContent)
         return -1;
     }
 
-    // Initialize the lower level file from the previous top layer
-    if (PakFileMgr == nullptr)
-    {
-        PakFileMgr = new FPakPlatformFile;
-        PakFileMgr->Initialize(&FPlatformFileManager::Get().GetPlatformFile(), T(""));
-        PakFileMgr->InitializeNewAsyncIO();
-    }
-
     // The pak reader is now the current platform file
     FPlatformFileManager::Get().SetPlatformFile(*PakFileMgr);
 
@@ -560,7 +552,12 @@ URCHTTP::URCHTTP(const FObjectInitializer& oi)
     : Super(oi), poll_interval(0), poll_ms(1)
 {
     // Initialize .pak file reader
-    PakFileMgr = nullptr;
+    if (PakFileMgr == nullptr)
+    {
+        PakFileMgr = new FPakPlatformFile;
+        PakFileMgr->Initialize(&FPlatformFileManager::Get().GetPlatformFile(), T(""));
+        PakFileMgr->InitializeNewAsyncIO();
+    }
 }
 
 URCHTTP::~URCHTTP()
