@@ -60,11 +60,11 @@ URCHTTP::MountPakFile(const FString& pakPath, bool bLoadContent)
         return -1;
     }
 
+    // Initialize the lower level file from the previous top layer
     if (PakFileMgr == nullptr)
     {
-        PakFileMgr =  new FPakPlatformFile;
-        // Initialize the lower level file from the previous top layer
-        PakFileMgr->Initialize(&FPlatformFileManager::Get().GetPlatformFile(),T(""));
+        PakFileMgr = new FPakPlatformFile;
+        PakFileMgr->Initialize(&FPlatformFileManager::Get().GetPlatformFile(), T(""));
         PakFileMgr->InitializeNewAsyncIO();
     }
 
@@ -142,13 +142,17 @@ URCHTTP::LoadObject(const FString& assetPath)
         return ret;
     }
 
-    // The pak reader is now the current platform file
+    // The pak reader is now the current platform file.
     FPlatformFileManager::Get().SetPlatformFile(*PakFileMgr);
     UAssetManager* Manager = UAssetManager::GetIfValid();
-    if (Manager && !FindObject<UStaticMesh>(ANY_PACKAGE, *assetPath))
+
+    ret = FindObject<UStaticMesh>(ANY_PACKAGE, *assetPath);
+    if (Manager && ret == nullptr)
         ret = Manager->GetStreamableManager().LoadSynchronous(assetPath, false, nullptr);
 
+    // Reset the platform file.
     FPlatformFileManager::Get().SetPlatformFile(*originalPlatform);
+
     FinishAllShaderCompilation();
     return ret;
 }
