@@ -75,19 +75,15 @@ URCHTTP::MountPakFile(const FString& pakPath, bool bLoadContent)
     FPaths::MakeStandardFilename(MountPointFull);
 
     LOG("Mounting at %s and registering mount point %s at %s", *MountPointFull, *MountPoint, *PathOnDisk);
-
     if (PakFileMgr->Mount(*pakPath, 0, *MountPointFull))
     {
-        LOG("Mount %s success", *MountPoint);
         if (UAssetManager* Manager = UAssetManager::GetIfValid())
         {
             Manager->GetAssetRegistry().SearchAllAssets(true);
-
             if (bLoadContent)
             {
                 TArray<FString> FileList;
-                PakFile.FindFilesAtPath(FileList, *PakFile.GetMountPoint(),
-                            true, false, true);
+                PakFile.FindFilesAtPath(FileList, *PakFile.GetMountPoint(), true, false, true);
 
                 // Iterate over the collected files from the pak
                 for (auto asset : FileList)
@@ -116,7 +112,6 @@ URCHTTP::MountPakFile(const FString& pakPath, bool bLoadContent)
   exit:
     // Restore the platform file
     FPlatformFileManager::Get().SetPlatformFile(*originalPlatform);
-
     FinishAllShaderCompilation();
 
     return ret;
@@ -144,8 +139,8 @@ URCHTTP::LoadObject(const FString& assetPath)
 
     // Reset the platform file.
     FPlatformFileManager::Get().SetPlatformFile(*originalPlatform);
-
     FinishAllShaderCompilation();
+
     return ret;
 }
 
