@@ -76,4 +76,7 @@ class UE4ORCHESTRATOR_API URCHTTP : public UObject, public FTickableGameObject
 
     UFUNCTION()
     void FinishAllShaderCompilation();
+
+    UFUNCTION()
+    void PakTest();
 };
