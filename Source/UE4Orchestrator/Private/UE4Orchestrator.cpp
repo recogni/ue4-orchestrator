@@ -139,7 +139,6 @@ URCHTTP::LoadObject(const FString& assetPath)
 
     // Reset the platform file.
     FPlatformFileManager::Get().SetPlatformFile(*originalPlatform);
-    FinishAllShaderCompilation();
 
     return ret;
 }
