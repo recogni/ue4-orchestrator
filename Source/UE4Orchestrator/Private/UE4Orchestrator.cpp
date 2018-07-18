@@ -112,7 +112,6 @@ URCHTTP::MountPakFile(const FString& pakPath, bool bLoadContent)
   exit:
     // Restore the platform file
     FPlatformFileManager::Get().SetPlatformFile(*originalPlatform);
-    FinishAllShaderCompilation();
 
     return ret;
 }
