@@ -19,6 +19,7 @@
 #include "Runtime/Engine/Classes/Engine/StreamableManager.h"
 #include "Runtime/Engine/Classes/Engine/AssetManager.h"
 #include "Runtime/Engine/Public/ShaderCompiler.h"
+#include "Runtime/Engine/Public/UnrealEngine.h"
 
 #if WITH_EDITOR
 #  include "LevelEditor.h"
@@ -163,6 +164,14 @@ URCHTTP::FinishAllShaderCompilation()
 {
     if (GShaderCompilingManager)
         GShaderCompilingManager->FinishAllCompilation();
+}
+
+void
+URCHTTP::GameRenderSync()
+{
+    static FFrameEndSync FrameEndSync;
+    /* Do a full sync without allowing a frame of lag */
+    FrameEndSync.Sync(false);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
