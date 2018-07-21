@@ -36,11 +36,6 @@ class UE4ORCHESTRATOR_API URCHTTP : public UObject, public FTickableGameObject
     virtual void PostEditChangeProperty(FPropertyChangedEvent& evt) override;
 #endif
 
-    /*
-     * Frame End
-     */
-    virtual void GameRenderSync();
-
     void SetPollInterval(int v);
 
   private:
@@ -86,4 +81,11 @@ class UE4ORCHESTRATOR_API URCHTTP : public UObject, public FTickableGameObject
 
     UFUNCTION()
     void FinishAllShaderCompilation();
+
+    /*
+     * Frame End
+     */
+    UFUNCTION()
+    virtual void GameRenderSync();
+    
 };
