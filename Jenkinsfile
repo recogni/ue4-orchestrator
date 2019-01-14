@@ -9,7 +9,7 @@ pipeline {
 
     environment {
         GCP_PROJECT_ID = sh(script: "gcloud config get-value project", returnStdout: true).trim()
-        SLACK_CHANNEL = "synth-automation"
+        SLACK_CHANNEL = "dev-automation"
     }
 
     stages {
